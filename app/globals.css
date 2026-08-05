@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Workspace — architectural drafting.
+
+   The office view genuinely is a floor plan, so the whole interface is built
+   like a working drawing: drafting paper, thin structural rules, dimension
+   lines, annotations in mono caps. Warm paper notes pinned onto a cool
+   technical ground. Deliberately not a generic SaaS dashboard.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --color-paper: #e9e7de; /* drafting paper ground */
+  --color-paper-deep: #d8d5c8; /* board surface, insets */
+  --color-ink: #1c222b; /* primary text, structural lines */
+  --color-ink-soft: #5c6470; /* secondary text, annotations */
+  --color-blueprint: #3f6e85; /* structural accent, room outlines */
+  --color-signal: #c0473c; /* blocked — the only alarming colour */
+
+  --color-note-plain: #efe3b8;
+  --color-note-cyan: #c5dce2;
+  --color-note-rose: #ebcbc6;
+  --color-note-mint: #cbdcc7;
+
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  /* Status text on sticky notes only. Never for UI. */
+  --font-hand: var(--font-architects-daughter), "Comic Sans MS", cursive;
+
+  /* Restraint: border-radius at most 2px, except on the notes themselves. */
+  --radius-sheet: 2px;
+  --radius-note: 3px;
+}
+
+/* Spec token names, so the design language in the brief exists literally in
+   the codebase and not only as Tailwind's --color-* rewrite. */
+:root {
+  --paper: var(--color-paper);
+  --paper-deep: var(--color-paper-deep);
+  --ink: var(--color-ink);
+  --ink-soft: var(--color-ink-soft);
+  --blueprint: var(--color-blueprint);
+  --signal: var(--color-signal);
+  --note-plain: var(--color-note-plain);
+  --note-cyan: var(--color-note-cyan);
+  --note-rose: var(--color-note-rose);
+  --note-mint: var(--color-note-mint);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Keyboard focus is always visible. Non-negotiable. */
+:focus-visible {
+  outline: 2px solid var(--blueprint);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Annotation type — mono, uppercase, generously tracked.
+   Timestamps, ticket refs, dimension labels.
+--------------------------------------------------------------------------- */
+.annotation {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.6875rem;
+  color: var(--ink-soft);
+}
+
+/* The handwritten status line. Notes only. */
+.hand {
+  font-family: var(--font-hand);
+  line-height: 1.3;
+}
+
+/* ---------------------------------------------------------------------------
+   Drafting ground — a faint grid, drawn not decorative.
+--------------------------------------------------------------------------- */
+.drafting-grid {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(to right, rgb(28 34 43 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(28 34 43 / 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* A dimension line, as on a working drawing. */
+.dimension-rule {
+  border-top: 1px solid rgb(28 34 43 / 0.25);
+  position: relative;
+}
+.dimension-rule::before,
+.dimension-rule::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 9px;
+  background: rgb(28 34 43 / 0.35);
+}
+.dimension-rule::before {
+  left: 0;
+}
+.dimension-rule::after {
+  right: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   SIGNATURE ELEMENT — staleness decay.
+
+   A status note visibly ages, because a board that hides stale data is lying.
+   This is where all the boldness in the design goes; everything else stays
+   quiet.
+
+   Tiers are set by data-decay, computed in lib/staleness.ts so the same
+   thresholds drive the markup, the mono age label, and the tests.
+--------------------------------------------------------------------------- */
+.note {
+  --curl: 0px;
+  position: relative;
+  border-radius: var(--radius-note);
+  background-color: var(--note-bg, var(--note-plain));
+  color: var(--ink);
+  transition:
+    filter 400ms ease,
+    box-shadow 400ms ease,
+    rotate 400ms ease;
+}
+
+/* < 1h — full saturation, crisp 2px shadow, sits flat. */
+.note[data-decay="fresh"] {
+  filter: none;
+  box-shadow: 2px 2px 0 rgb(28 34 43 / 0.28);
+  rotate: 0deg;
+}
+
+/* 1–3h — shadow softens, paper desaturates ~15%. */
+.note[data-decay="soft"] {
+  filter: saturate(0.85);
+  box-shadow: 2px 2px 5px rgb(28 34 43 / 0.16);
+  rotate: 0deg;
+}
+
+/* 3–6h — desaturates ~35%, bottom-right corner curls, note tilts 1–2°. */
+.note[data-decay="curl"] {
+  --curl: 14px;
+  filter: saturate(0.65);
+  box-shadow: 1px 2px 7px rgb(28 34 43 / 0.13);
+  rotate: -1.2deg;
+}
+
+/* > 6h — near-greyscale, pronounced curl. */
+.note[data-decay="stale"] {
+  --curl: 22px;
+  filter: saturate(0.12);
+  box-shadow: 1px 2px 9px rgb(28 34 43 / 0.11);
+  rotate: -2deg;
+}
+
+/* The curl itself: a flat two-tone fold, not a gradient. The corner is cut
+   from the note and the flap is drawn back over it. */
+.note[data-decay="curl"],
+.note[data-decay="stale"] {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--curl)),
+    calc(100% - var(--curl)) 100%,
+    0 100%
+  );
+}
+
+.note[data-decay="curl"]::after,
+.note[data-decay="stale"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--curl);
+  height: var(--curl);
+  background: var(--paper-deep);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  box-shadow: -1px -1px 2px rgb(28 34 43 / 0.18);
+}
+
+/* Blocked notes are exempt from decay. A blocker should never fade into the
+   background: signal pushpin, full saturation, slow pulse until resolved. */
+.note[data-blocked="true"] {
+  filter: none !important;
+  rotate: 0deg !important;
+  clip-path: none !important;
+  --curl: 0px;
+  box-shadow: 2px 2px 0 rgb(192 71 60 / 0.45);
+  animation: note-pulse 3.2s ease-in-out infinite;
+}
+.note[data-blocked="true"]::after {
+  display: none;
+}
+
+@keyframes note-pulse {
+  0%,
+  100% {
+    box-shadow: 2px 2px 0 rgb(192 71 60 / 0.45);
+  }
+  50% {
+    box-shadow: 2px 2px 0 rgb(192 71 60 / 0.9);
+  }
+}
+
+.pushpin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+.note[data-blocked="true"] .pushpin {
+  background: var(--signal);
+}
+
+/* ---------------------------------------------------------------------------
+   Respect prefers-reduced-motion: replace motion with the static mono age
+   label, which is always in the DOM anyway.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .note {
+    rotate: 0deg !important;
+  }
+}
