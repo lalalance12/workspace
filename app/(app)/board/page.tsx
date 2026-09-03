@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { BoardView } from "./board-view";
 import { PageHeader } from "@/components/ui/page";
-import { getBoardData, getViewer } from "@/lib/queries";
+import { getBoardData, getOpenPeerNudges, getViewer } from "@/lib/queries";
 
 /**
  * Server shell: fetch the initial data for a fast first paint, then hand off
@@ -16,7 +16,10 @@ export default async function BoardPage() {
   // check only to narrow the type.
   if (!viewer.profile.team_id) redirect("/onboarding");
 
-  const { members, statuses } = await getBoardData(viewer.profile.team_id);
+  const [{ members, statuses }, nudges] = await Promise.all([
+    getBoardData(viewer.profile.team_id),
+    getOpenPeerNudges(viewer.profile.team_id),
+  ]);
 
   return (
     <>
@@ -30,6 +33,7 @@ export default async function BoardPage() {
         viewerId={viewer.profile.id}
         members={members}
         initialStatuses={statuses}
+        initialNudges={nudges}
         serverNow={Date.now()}
       />
     </>

@@ -55,7 +55,12 @@ export async function getBoardData(teamId: string) {
   const [{ data: members }, { data: statuses }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, avatar_url, message_link")
+      // peer_nudges_enabled and the pause drive whether the board offers a
+      // Nudge button at all. The RPC refuses either way; asking first means we
+      // do not offer an action that is guaranteed to fail.
+      .select(
+        "id, display_name, avatar_url, message_link, peer_nudges_enabled, nudges_paused_until",
+      )
       .eq("team_id", teamId)
       .order("display_name"),
     supabase
@@ -92,6 +97,27 @@ export async function getQuickPicks(profileId: string) {
     .eq("profile_id", profileId)
     .order("last_used_at", { ascending: false })
     .limit(6);
+
+  return data ?? [];
+}
+
+/**
+ * Open peer nudges for the team.
+ *
+ * Peer nudges are readable team-wide by policy, on purpose: nudging in the open
+ * keeps it social, and a covert nudge is a management cudgel. The board uses
+ * this both to mark who has been nudged and to show the recipient their own.
+ */
+export async function getOpenPeerNudges(teamId: string) {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("nudges")
+    .select("id, recipient_id, sender_id, note, link, created_at")
+    .eq("team_id", teamId)
+    .eq("kind", "peer")
+    .eq("state", "open")
+    .order("created_at", { ascending: false });
 
   return data ?? [];
 }

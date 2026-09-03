@@ -295,6 +295,9 @@ h3 {
    own state colour, so choosing one previews the card you are about to post. */
 .chip {
   --state: var(--color-state-working);
+  /* .state-dot mixes against --tint, which only .note declares. Without this
+     the mix was invalid and every unselected dot fell back to nothing. */
+  --tint: 1;
   cursor: pointer;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);

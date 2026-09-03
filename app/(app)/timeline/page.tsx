@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-import { StatusNote } from "@/components/status-note";
+import { TimelineView, type TimelineRow } from "./timeline-view";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
-/** Today's history. Replay is not built yet; this is the honest list. */
+/** Today's history. Fetched once on the server; filtered and re-cut client-side. */
 export default async function TimelinePage() {
   const viewer = await getViewer();
   if (!viewer?.profile.team_id) return null;
@@ -24,23 +24,23 @@ export default async function TimelinePage() {
     supabase
       .from("profiles")
       .select("id, display_name")
-      .eq("team_id", viewer.profile.team_id),
+      .eq("team_id", viewer.profile.team_id)
+      .order("display_name"),
   ]);
 
-  const nameFor = new Map((members ?? []).map((m) => [m.id, m.display_name]));
-  const now = Date.now();
+  const count = rows?.length ?? 0;
 
   return (
     <>
       <PageHeader
         title="Timeline"
-        meta={`Today · ${rows?.length ?? 0} update${rows?.length === 1 ? "" : "s"}`}
+        meta={`Today · ${count} update${count === 1 ? "" : "s"}`}
       />
 
-      {!rows || rows.length === 0 ? (
+      {count === 0 ? (
         <EmptyState
           title="Nothing posted today yet"
-          hint="Every status the team posts today lands here, newest first."
+          hint="Every status the team posts today lands here, and you can cut it by person, state or hour."
           action={
             <Link href="/me" className="btn btn-primary">
               Post the first update
@@ -48,21 +48,11 @@ export default async function TimelinePage() {
           }
         />
       ) : (
-        <ol className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6">
-          {rows.map((row, i) => (
-            <li
-              key={row.id}
-              className="rise-in"
-              style={{ animationDelay: `${Math.min(i * 35, 280)}ms` }}
-            >
-              <StatusNote
-                status={row}
-                name={nameFor.get(row.profile_id) ?? "Someone"}
-                now={now}
-              />
-            </li>
-          ))}
-        </ol>
+        <TimelineView
+          rows={(rows ?? []) as TimelineRow[]}
+          people={members ?? []}
+          serverNow={Date.now()}
+        />
       )}
     </>
   );

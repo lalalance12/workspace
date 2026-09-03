@@ -122,6 +122,16 @@ collapse them into one UI.
 A peer nudge is a **signpost, not a message.** At most an 80-char note and a
 link out to the real conversation. Never let it grow a reply field.
 
+Both are wired end to end in the UI. Peer nudges are sent from a per-card button
+on `/board` (`components/nudge-composer.tsx`), land as a banner for the
+recipient (`components/nudge-banner.tsx`), show a team-wide "Nudged" marker on
+the card, and are acknowledged from either the banner or the bell. The head
+edits every limit on `/settings/team` — those write straight to `public.teams`
+under the `head updates own team` policy, no RPC needed.
+
+`/office` is **parked until after the presentation**. The route and its query
+still exist; it is off the nav on purpose.
+
 Peer nudges are visible team-wide on purpose. Nudging in the open keeps it
 social; covert nudging turns the feature into a management cudgel.
 

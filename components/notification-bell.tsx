@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-import { markNotificationRead } from "@/lib/rpc";
+import { RpcError, acknowledgeNudge, markNotificationRead } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
 interface Notification {
   id: string;
   kind: string;
+  nudge_id: string | null;
   title: string;
   body: string | null;
   href: string | null;
@@ -21,10 +22,15 @@ interface Notification {
  *
  * Rows arrive by trigger and stream in over Realtime. This component never
  * creates one — there is no insert policy on the table, by design.
+ *
+ * A peer nudge is the one kind that can be answered from here: acknowledging
+ * tells the sender you saw it, which is the loop closing. Everything else is
+ * read-and-go.
  */
 export function NotificationBell({ profileId }: { profileId: string }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [acking, setAcking] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -32,7 +38,7 @@ export function NotificationBell({ profileId }: { profileId: string }) {
 
     void supabase
       .from("notifications")
-      .select("id, kind, title, body, href, read_at, created_at")
+      .select("id, kind, nudge_id, title, body, href, read_at, created_at")
       .order("created_at", { ascending: false })
       .limit(20)
       .then(({ data }) => {
@@ -74,7 +80,7 @@ export function NotificationBell({ profileId }: { profileId: string }) {
 
   const unread = items.filter((n) => !n.read_at).length;
 
-  async function onRead(n: Notification) {
+  async function markRead(n: Notification) {
     if (n.read_at) return;
     setItems((prev) =>
       prev.map((i) =>
@@ -91,6 +97,41 @@ export function NotificationBell({ profileId }: { profileId: string }) {
     }
   }
 
+  async function markAllRead() {
+    const pending = items.filter((n) => !n.read_at);
+    if (pending.length === 0) return;
+
+    const stamp = new Date().toISOString();
+    setItems((prev) => prev.map((i) => ({ ...i, read_at: i.read_at ?? stamp })));
+
+    const client = createClient();
+    await Promise.allSettled(
+      pending.map((n) => markNotificationRead(client, n.id)),
+    );
+  }
+
+  async function onAcknowledge(n: Notification) {
+    if (!n.nudge_id) return;
+    setAcking(n.id);
+    try {
+      await acknowledgeNudge(createClient(), n.nudge_id);
+      await markRead(n);
+      setItems((prev) =>
+        prev.map((i) => (i.id === n.id ? { ...i, nudge_id: null } : i)),
+      );
+    } catch (err) {
+      // WS006 means somebody already handled it — treat that as done rather
+      // than as an error worth shouting about.
+      if (err instanceof RpcError && err.code === "WS006") {
+        setItems((prev) =>
+          prev.map((i) => (i.id === n.id ? { ...i, nudge_id: null } : i)),
+        );
+      }
+    } finally {
+      setAcking(null);
+    }
+  }
+
   return (
     <div className="relative">
       <button
@@ -102,54 +143,104 @@ export function NotificationBell({ profileId }: { profileId: string }) {
         }
         className="relative grid size-9 cursor-pointer place-items-center rounded-full text-[var(--ink-soft)] transition-colors duration-200 hover:bg-[var(--sunken)] hover:text-[var(--ink)]"
       >
-        <BellGlyph />
+        <BellGlyph ringing={unread > 0} />
         {unread > 0 && (
           <span
             aria-hidden="true"
             className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[10px] leading-4 font-semibold text-white"
             style={{ backgroundImage: "var(--gradient-brand)" }}
           >
-            {unread}
+            {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
 
       {open && (
         <>
-          {/* Click anywhere else to dismiss. */}
           <div
             className="fixed inset-0 z-40"
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
-          <div className="panel rise-in absolute right-0 z-50 mt-2 w-80 overflow-hidden p-1.5">
+          <div className="panel rise-in absolute right-0 z-50 mt-2 w-[22rem] overflow-hidden">
+            <div
+              className="flex items-center justify-between border-b px-4 py-2.5"
+              style={{ borderColor: "var(--line)" }}
+            >
+              <span className="annotation">
+                {unread > 0 ? `${unread} unread` : "Notifications"}
+              </span>
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void markAllRead()}
+                  className="cursor-pointer text-xs font-medium text-[var(--violet)] hover:underline"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
             {items.length === 0 ? (
-              <p className="annotation p-4 text-center">Nothing yet</p>
+              <div className="px-4 py-10 text-center">
+                <span
+                  aria-hidden="true"
+                  className="mx-auto mb-3 block h-1 w-10 rounded-full"
+                  style={{ backgroundImage: "var(--gradient-brand)" }}
+                />
+                <p className="text-sm font-medium">You&rsquo;re all caught up</p>
+                <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                  Nudges and blockers land here.
+                </p>
+              </div>
             ) : (
-              <ul className="flex max-h-96 flex-col overflow-y-auto">
+              <ul className="flex max-h-[26rem] flex-col overflow-y-auto p-1.5">
                 {items.map((n) => (
                   <li key={n.id}>
-                    <a
-                      href={n.href ?? "/board"}
-                      onClick={() => void onRead(n)}
-                      className="block rounded-[10px] p-3 transition-colors duration-150 hover:bg-[var(--sunken)]"
+                    <div
+                      className="rounded-[10px] p-3 transition-colors duration-150 hover:bg-[var(--sunken)]"
+                      style={{
+                        background: n.read_at
+                          ? undefined
+                          : "color-mix(in oklab, var(--violet) 6%, transparent)",
+                      }}
                     >
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="text-sm font-medium">{n.title}</span>
-                        {!n.read_at && (
-                          <span
-                            className="size-2 shrink-0 rounded-full"
-                            style={{ background: "var(--violet)" }}
-                            aria-label="unread"
-                          />
-                        )}
-                      </span>
-                      {n.body && (
-                        <span className="mt-1 block text-sm text-[var(--ink-soft)]">
-                          {n.body}
+                      <a
+                        href={n.href ?? "/board"}
+                        onClick={() => void markRead(n)}
+                        className="block"
+                      >
+                        <span className="flex items-start gap-2.5">
+                          <KindMark kind={n.kind} />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="text-sm font-medium">
+                                {n.title}
+                              </span>
+                              <span className="annotation shrink-0">
+                                {relativeTime(n.created_at)}
+                              </span>
+                            </span>
+                            {n.body && (
+                              <span className="mt-1 block text-sm text-[var(--ink-soft)]">
+                                {n.body}
+                              </span>
+                            )}
+                          </span>
                         </span>
+                      </a>
+
+                      {n.kind === "peer_nudge" && n.nudge_id && (
+                        <button
+                          type="button"
+                          onClick={() => void onAcknowledge(n)}
+                          disabled={acking === n.id}
+                          className="btn btn-quiet mt-2.5 ml-7 px-3 py-1.5 text-xs"
+                        >
+                          {acking === n.id ? "…" : "Got it"}
+                        </button>
                       )}
-                    </a>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -161,7 +252,40 @@ export function NotificationBell({ profileId }: { profileId: string }) {
   );
 }
 
-function BellGlyph() {
+/**
+ * A coloured dot per kind, using the same state palette as the board so the
+ * two surfaces agree: a blocked teammate is signal red in both places.
+ */
+function KindMark({ kind }: { kind: string }) {
+  const color =
+    kind === "teammate_blocked"
+      ? "var(--color-state-blocked)"
+      : kind === "system_nudge"
+        ? "var(--color-state-meeting)"
+        : kind === "nudge_acknowledged"
+          ? "var(--color-state-break)"
+          : "var(--violet)";
+
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-1.5 size-2 shrink-0 rounded-full"
+      style={{ background: color }}
+    />
+  );
+}
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function BellGlyph({ ringing }: { ringing: boolean }) {
   return (
     <svg
       width="17"
@@ -173,6 +297,7 @@ function BellGlyph() {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      style={ringing ? { color: "var(--violet)" } : undefined}
     >
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.7 21a2 2 0 0 1-3.4 0" />

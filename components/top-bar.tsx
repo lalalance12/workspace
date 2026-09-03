@@ -3,10 +3,20 @@ import Link from "next/link";
 import { NavLinks, type NavItem } from "@/components/nav-links";
 import { NotificationBell } from "@/components/notification-bell";
 
+/**
+ * Office is deliberately absent.
+ *
+ * The route still exists and still reads the real roster — it is parked until
+ * after the presentation, not deleted. Leaving a nav item pointing at a screen
+ * that says "not drawn yet" spends a click to deliver a disappointment, so it
+ * comes back to the bar when the floor plan does.
+ *
+ * "Me" became "Status": next to Board and Timeline it read as an account page,
+ * which is what /settings/me actually is.
+ */
 const NAV: NavItem[] = [
   { href: "/board", label: "Board" },
-  { href: "/office", label: "Office" },
-  { href: "/me", label: "Me" },
+  { href: "/me", label: "Status" },
   { href: "/timeline", label: "Timeline" },
 ];
 
