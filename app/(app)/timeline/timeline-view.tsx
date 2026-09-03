@@ -50,6 +50,8 @@ export function TimelineView({
   const [view, setView] = useState<View>("cards");
   const [person, setPerson] = useState<string | null>(null);
   const [state, setState] = useState<StatusState | null>(null);
+  const [fromHour, setFromHour] = useState(0);
+  const [toHour, setToHour] = useState(23);
 
   const nameFor = useMemo(
     () => new Map(people.map((p) => [p.id, p.display_name])),
@@ -58,12 +60,16 @@ export function TimelineView({
 
   const visible = useMemo(
     () =>
-      rows.filter(
-        (r) =>
+      rows.filter((r) => {
+        const hour = new Date(r.started_at).getHours();
+        return (
           (person === null || r.profile_id === person) &&
-          (state === null || r.state === state),
-      ),
-    [rows, person, state],
+          (state === null || r.state === state) &&
+          hour >= fromHour &&
+          hour <= toHour
+        );
+      }),
+    [rows, person, state, fromHour, toHour],
   );
 
   // Only offer filters that would actually match something. A chip that
@@ -76,6 +82,13 @@ export function TimelineView({
     () => people.filter((p) => rows.some((r) => r.profile_id === p.id)),
     [people, rows],
   );
+
+  const hoursPresent = useMemo(() => {
+    const hours = rows.map((r) => new Date(r.started_at).getHours());
+    return { first: Math.min(...hours), last: Math.max(...hours) };
+  }, [rows]);
+
+  const wholeDay = fromHour === 0 && toHour === 23;
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,6 +165,57 @@ export function TimelineView({
             );
           })}
         </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="annotation mr-1">Hours</span>
+
+          <HourSelect
+            label="From"
+            value={fromHour}
+            onChange={(h) => {
+              setFromHour(h);
+              // Dragging the start past the end would silently empty the list.
+              if (h > toHour) setToHour(h);
+            }}
+          />
+          <span className="text-sm text-[var(--ink-soft)]">to</span>
+          <HourSelect
+            label="To"
+            value={toHour}
+            onChange={(h) => {
+              setToHour(h);
+              if (h < fromHour) setFromHour(h);
+            }}
+          />
+
+          {/* Snap to the hours that actually contain something — on a normal
+              day that trims the empty small hours off both ends. */}
+          {Number.isFinite(hoursPresent.first) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFromHour(hoursPresent.first);
+                setToHour(hoursPresent.last);
+              }}
+              className="chip"
+            >
+              Active hours
+            </button>
+          )}
+
+          {!wholeDay && (
+            <button
+              type="button"
+              onClick={() => {
+                setFromHour(0);
+                setToHour(23);
+              }}
+              className="chip"
+            >
+              Whole day
+            </button>
+          )}
+        </div>
       </div>
 
       <hr className="rule-brand" />
@@ -178,6 +242,32 @@ export function TimelineView({
 }
 
 /* ------------------------------------------------------------------------- */
+
+/** A bare hour picker. 24 options, labelled in the viewer's own clock format. */
+function HourSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (hour: number) => void;
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="input w-auto py-1.5 text-sm"
+    >
+      {Array.from({ length: 24 }, (_, h) => (
+        <option key={h} value={h}>
+          {formatHour(h)}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 type NameFor = Map<string, string>;
 

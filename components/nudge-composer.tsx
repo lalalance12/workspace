@@ -6,15 +6,22 @@ import { Button } from "@/components/ui/button";
 import { RpcError, sendPeerNudge } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
-const MAX_NOTE = 80;
+/**
+ * Hard cap, well under the database's 80. A nudge is a signpost, not a
+ * message — at this length it can only point, which is the intent.
+ */
+const MAX_NOTE = 11;
 
 /**
  * A peer nudge is a signpost, not a message.
  *
- * Eighty characters and a link out to wherever the team actually talks. There
- * is no reply field and there must never be one — the moment this grows a
- * thread, Workspace stops being a status board and starts competing badly with
- * Slack. The character counter is not a formality: the database rejects 81.
+ * A few characters and a link out to wherever the team actually talks. There is
+ * no reply field and there must never be one — the moment this grows a thread,
+ * Workspace stops being a status board and starts competing badly with Slack.
+ *
+ * Rendered by the board as a sibling of the card, not inside it: anything
+ * absolutely positioned within the card is trapped by its bounds, which is why
+ * this used to appear cut off at the card's edge.
  */
 export function NudgeComposer({
   recipientId,
@@ -68,7 +75,7 @@ export function NudgeComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="panel rise-in absolute top-full right-0 z-30 mt-2 w-72 p-3"
+      className="panel rise-in absolute top-10 right-2 z-50 w-64 p-3 shadow-lg"
       onClick={(e) => e.stopPropagation()}
     >
       <p className="annotation mb-2">Nudge {recipientName}</p>
@@ -78,14 +85,14 @@ export function NudgeComposer({
         value={note}
         onChange={(e) => setNote(e.target.value.slice(0, MAX_NOTE))}
         maxLength={MAX_NOTE}
-        placeholder="Free to look at the deploy?"
+        placeholder="Deploy?"
         className="input text-sm"
       />
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <span
           className="annotation"
-          style={{ color: left < 10 ? "var(--signal)" : undefined }}
+          style={{ color: left <= 3 ? "var(--signal)" : undefined }}
         >
           {left} left
         </span>
@@ -100,7 +107,7 @@ export function NudgeComposer({
       </div>
 
       <p className="mt-2 text-xs text-[var(--ink-soft)]">
-        Sends them to your messages. The team can see you nudged.
+        Points them at your messages. The team can see you nudged.
       </p>
 
       {error && (

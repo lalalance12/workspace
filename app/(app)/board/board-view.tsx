@@ -277,18 +277,21 @@ export function BoardView({
                             </button>
                           )}
 
-                          {composingFor === member.id && (
-                            <NudgeComposer
-                              recipientId={member.id}
-                              recipientName={member.display_name}
-                              onClose={() => setComposingFor(null)}
-                              onSent={() => setComposingFor(null)}
-                            />
-                          )}
                         </span>
                       }
                     />
                   </motion.div>
+
+                  {/* Sibling of the card, not a child. Inside it, the popover
+                      was bounded by the card and appeared cut off. */}
+                  {composingFor === member.id && (
+                    <NudgeComposer
+                      recipientId={member.id}
+                      recipientName={member.display_name}
+                      onClose={() => setComposingFor(null)}
+                      onSent={() => setComposingFor(null)}
+                    />
+                  )}
                 </motion.div>
               );
             })}

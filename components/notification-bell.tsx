@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { RpcError, acknowledgeNudge, markNotificationRead } from "@/lib/rpc";
+import { markNotificationRead } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
 interface Notification {
@@ -23,14 +23,16 @@ interface Notification {
  * Rows arrive by trigger and stream in over Realtime. This component never
  * creates one — there is no insert policy on the table, by design.
  *
- * A peer nudge is the one kind that can be answered from here: acknowledging
- * tells the sender you saw it, which is the loop closing. Everything else is
- * read-and-go.
+ * It reports and does not act. Nothing here is answerable: acknowledging a
+ * nudge happens on the board, where the nudge actually is. A list that both
+ * tells you things and asks things of you is an inbox, and this is not one.
+ *
+ * Every row is the same height — one line of title, two of body — so a long
+ * note cannot push the rest of the list out of view.
  */
 export function NotificationBell({ profileId }: { profileId: string }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
-  const [acking, setAcking] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -110,28 +112,6 @@ export function NotificationBell({ profileId }: { profileId: string }) {
     );
   }
 
-  async function onAcknowledge(n: Notification) {
-    if (!n.nudge_id) return;
-    setAcking(n.id);
-    try {
-      await acknowledgeNudge(createClient(), n.nudge_id);
-      await markRead(n);
-      setItems((prev) =>
-        prev.map((i) => (i.id === n.id ? { ...i, nudge_id: null } : i)),
-      );
-    } catch (err) {
-      // WS006 means somebody already handled it — treat that as done rather
-      // than as an error worth shouting about.
-      if (err instanceof RpcError && err.code === "WS006") {
-        setItems((prev) =>
-          prev.map((i) => (i.id === n.id ? { ...i, nudge_id: null } : i)),
-        );
-      }
-    } finally {
-      setAcking(null);
-    }
-  }
-
   return (
     <div className="relative">
       <button
@@ -197,50 +177,31 @@ export function NotificationBell({ profileId }: { profileId: string }) {
               <ul className="flex max-h-[26rem] flex-col overflow-y-auto p-1.5">
                 {items.map((n) => (
                   <li key={n.id}>
-                    <div
-                      className="rounded-[10px] p-3 transition-colors duration-150 hover:bg-[var(--sunken)]"
+                    <a
+                      href={n.href ?? "/board"}
+                      onClick={() => void markRead(n)}
+                      className="flex h-[4.75rem] items-start gap-2.5 rounded-[10px] p-3 transition-colors duration-150 hover:bg-[var(--sunken)]"
                       style={{
                         background: n.read_at
                           ? undefined
                           : "color-mix(in oklab, var(--violet) 6%, transparent)",
                       }}
                     >
-                      <a
-                        href={n.href ?? "/board"}
-                        onClick={() => void markRead(n)}
-                        className="block"
-                      >
-                        <span className="flex items-start gap-2.5">
-                          <KindMark kind={n.kind} />
-                          <span className="min-w-0 flex-1">
-                            <span className="flex items-baseline justify-between gap-2">
-                              <span className="text-sm font-medium">
-                                {n.title}
-                              </span>
-                              <span className="annotation shrink-0">
-                                {relativeTime(n.created_at)}
-                              </span>
-                            </span>
-                            {n.body && (
-                              <span className="mt-1 block text-sm text-[var(--ink-soft)]">
-                                {n.body}
-                              </span>
-                            )}
+                      <KindMark kind={n.kind} />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="truncate text-sm font-medium">
+                            {n.title}
+                          </span>
+                          <span className="annotation shrink-0">
+                            {relativeTime(n.created_at)}
                           </span>
                         </span>
-                      </a>
-
-                      {n.kind === "peer_nudge" && n.nudge_id && (
-                        <button
-                          type="button"
-                          onClick={() => void onAcknowledge(n)}
-                          disabled={acking === n.id}
-                          className="btn btn-quiet mt-2.5 ml-7 px-3 py-1.5 text-xs"
-                        >
-                          {acking === n.id ? "…" : "Got it"}
-                        </button>
-                      )}
-                    </div>
+                        <span className="mt-1 line-clamp-2 text-sm text-[var(--ink-soft)]">
+                          {n.body ?? SUBTITLE[n.kind] ?? ""}
+                        </span>
+                      </span>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -251,6 +212,12 @@ export function NotificationBell({ profileId }: { profileId: string }) {
     </div>
   );
 }
+
+/** Fills the body line for kinds the triggers leave empty, so rows stay even. */
+const SUBTITLE: Record<string, string> = {
+  nudge_acknowledged: "They know to expect you.",
+  peer_nudge: "Check your messages.",
+};
 
 /**
  * A coloured dot per kind, using the same state palette as the board so the

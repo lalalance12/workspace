@@ -119,8 +119,13 @@ collapse them into one UI.
 | Rate limit | 1/hour per recipient, 5/hour total | the interval itself |
 | Visibility | whole team can see it happened | private to recipient and head |
 
-A peer nudge is a **signpost, not a message.** At most an 80-char note and a
-link out to the real conversation. Never let it grow a reply field.
+A peer nudge is a **signpost, not a message.** The database allows 80
+characters; the composer caps it at 11, so it can only point. Never let it
+grow a reply field.
+
+The bell **reports and does not act.** Acknowledging happens on the board,
+where the nudge is. The board shows the latest open nudge only and counts the
+rest; the bell holds the history.
 
 Both are wired end to end in the UI. Peer nudges are sent from a per-card button
 on `/board` (`components/nudge-composer.tsx`), land as a banner for the
@@ -154,9 +159,13 @@ failed and what to do — never a bare "Something went wrong."
 
 **Lit and unlit.** The product is about attention over time: a status is worth
 something when it is fresh and worth less every hour it sits there. So light is
-the design language. A fresh card is lit — saturated tint, a coloured glow
-underneath, full chroma. As it ages the light drains out until the card is
-neutral, dim and curling at the corner.
+the design language. A fresh card is lit — its state colour at full strength,
+with a matching glow underneath. As it ages the colour drains out until the card
+is near-white and the mono age label is all that is left.
+
+Decay is **chromatic, not geometric.** An earlier version cut the corner and
+tilted the card; both read as a rendering fault rather than as ageing. The card
+keeps its shape and loses its colour instead.
 
 The gradient is therefore never decoration. `--tint` is set by the decay tier
 and every colour on a card is mixed against it with `color-mix()`, which makes
@@ -194,14 +203,19 @@ age label, and the tests.
 
 | Age | `--tint` | Treatment |
 |---|---|---|
-| < 1h | 1.0 | full tint, coloured glow, sits flat |
-| 1–3h | 0.72 | glow starts to go |
-| 3–6h | 0.42 | colour mostly gone, corner curls, tilts 1° |
-| > 6h | 0.14 | neutral and dim, pronounced curl, reads `STALE · 7H` |
+| < 1h | 1.0 | state colour at full strength, coloured glow |
+| 1–3h | 0.72 | colour and glow begin to go |
+| 3–6h | 0.42 | mostly drained |
+| > 6h | 0.14 | near-white, reads `STALE · 7H` |
 
 Blocked cards are exempt from decay — they hold full chroma, invert to white
 ink, and breathe on a slow loop until resolved. A blocker should never fade
 into the background.
+
+The **avatar is always violet**, never the state colour: the circle answers
+*who* and the card answers *what is happening*, one signal each. It overhangs
+the card's top-left corner as a sibling of `.note`, with the wrapper carrying
+`data-decay` so both inherit `--tint` from one place.
 
 ### Restraint
 

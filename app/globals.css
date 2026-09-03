@@ -5,9 +5,13 @@
 
    The product is about attention over time: a status is worth something when
    it is fresh and worth less every hour it sits there. So light is the whole
-   design language. A fresh card is lit — saturated tint, a coloured glow
-   underneath, full chroma. As it ages the light drains out of it until the
-   card is neutral, dim and curling at the corner.
+   design language. A fresh card is lit — its state colour at full strength,
+   with a matching glow underneath. As it ages the colour drains out of it until
+   the card is near-white and the mono label is all that is left.
+
+   Decay is chromatic, not geometric. A cut corner and a tilt both read as a
+   rendering fault rather than as ageing, so the card keeps its shape and loses
+   its colour instead.
 
    The gradient is therefore not decoration. --tint is set by the decay tier
    and every colour on the card is mixed against it, which means the palette
@@ -343,19 +347,18 @@ h3 {
 --------------------------------------------------------------------------- */
 .note {
   --tint: 1;
-  --curl: 0px;
   --state: var(--color-state-working);
 
   position: relative;
   border-radius: var(--radius-card);
   border: 1px solid
-    color-mix(in oklab, var(--state) calc(var(--tint) * 34%), var(--line));
+    color-mix(in oklab, var(--state) calc(var(--tint) * 48%), var(--line));
   background-color: var(--surface);
   background-image: linear-gradient(
     152deg,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 26%), var(--surface)) 0%,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 10%), var(--surface)) 58%,
-    var(--surface) 100%
+    color-mix(in oklab, var(--state) calc(var(--tint) * 52%), var(--surface)) 0%,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 30%), var(--surface)) 55%,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 16%), var(--surface)) 100%
   );
   box-shadow:
     0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
@@ -365,14 +368,12 @@ h3 {
     box-shadow 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 420ms ease,
     background-image 420ms ease,
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    rotate 420ms ease;
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* The tint ladder lives on any element carrying data-decay, not just .note.
-   The avatar has to age with its card and cannot live inside one: the curl is a
-   clip-path, and a clip-path cuts off every child that crosses the boundary. So
-   the wrapper carries the tier and both halves inherit --tint from it. */
+   The wrapper carries the tier so the card and the avatar that overhangs it
+   both inherit --tint from one place. */
 [data-decay="fresh"] {
   --tint: 1;
 }
@@ -384,48 +385,6 @@ h3 {
 }
 [data-decay="stale"] {
   --tint: 0.14;
-}
-
-/* Geometry stays on the card itself. */
-.note[data-decay="fresh"],
-.note[data-decay="soft"] {
-  rotate: 0deg;
-}
-
-.note[data-decay="curl"] {
-  --curl: 16px;
-  rotate: -1.1deg;
-}
-
-.note[data-decay="stale"] {
-  --curl: 24px;
-  rotate: -2deg;
-}
-
-/* The curl: the corner is cut out of the card and the flap drawn back over
-   it. Flat two-tone, so it reads as paper rather than as a shadow effect. */
-.note[data-decay="curl"],
-.note[data-decay="stale"] {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - var(--curl)),
-    calc(100% - var(--curl)) 100%,
-    0 100%
-  );
-}
-
-.note[data-decay="curl"]::after,
-.note[data-decay="stale"]::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: var(--curl);
-  height: var(--curl);
-  background: var(--sunken);
-  clip-path: polygon(100% 0, 0 100%, 100% 100%);
-  box-shadow: -1px -1px 3px color-mix(in oklab, var(--ink) 18%, transparent);
 }
 
 /* Hover: the card lifts toward the light. Cheap, physical, and it never moves
@@ -443,9 +402,6 @@ h3 {
    never fade into the background. */
 .note[data-blocked="true"] {
   --tint: 1;
-  --curl: 0px;
-  rotate: 0deg !important;
-  clip-path: none !important;
   background-color: var(--color-state-blocked);
   background-image: linear-gradient(
     152deg,
@@ -480,14 +436,12 @@ h3 {
    The avatar.
 
    Foundation for real profile pictures; for now it is the first letter of the
-   name. It overhangs the top-left of the card, which is why it is a SIBLING of
-   .note rather than a child — the curl is a clip-path, and a clip-path cuts off
-   anything that crosses the card's edge.
+   name. It overhangs the top-left of the card, so it is a sibling of .note
+   rather than a child.
 
-   Its ring carries the state colour, mixed against --tint like everything else,
-   so it drains as the card ages. That replaced a 3px bar down the card's left
-   edge: with the avatar sitting there too, two state cues were fighting over
-   the same three pixels.
+   Always violet, never the state colour. The circle answers "who" and the card
+   answers "what is happening" — one signal each. Tying both to the state meant
+   two things changing colour together and neither reading clearly.
 --------------------------------------------------------------------------- */
 .avatar {
   display: grid;
@@ -501,11 +455,7 @@ h3 {
   line-height: 1;
   color: white;
   user-select: none;
-  background-color: color-mix(
-    in oklab,
-    var(--state) calc(var(--tint) * 100%),
-    var(--color-state-off)
-  );
+  background-image: var(--gradient-brand);
   /* The ring cuts the circle out of the card behind it, so it reads as sitting
      on top rather than punched into the surface. */
   box-shadow:
@@ -514,13 +464,6 @@ h3 {
   transition:
     background-color 420ms ease,
     box-shadow 420ms ease;
-}
-
-/* On a blocked card the ground is already full-chroma signal, so the avatar
-   inverts to stay legible against it. */
-.note-wrap[data-blocked="true"] .avatar {
-  background-color: white;
-  color: var(--color-state-blocked);
 }
 
 /* A small pill in the card header. Used for "Nudged", which is public on
@@ -655,7 +598,6 @@ h3 {
   }
   .note,
   .note:hover {
-    rotate: 0deg !important;
     transform: none !important;
   }
   /* A sweep frozen at the end of its travel is a white bar sitting over the
