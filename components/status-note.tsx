@@ -9,6 +9,11 @@ export interface NoteStatus {
   state: string;
   note: string | null;
   ticket_ref: string | null;
+  duration_minutes: number | null;
+  /** Only read by the /me form to re-fill its picker; the card never shows it. */
+  auto_switch_to?: string | null;
+  /** The person's own words, shown in place of the label when state is 'other'. */
+  custom_label?: string | null;
   started_at: string;
 }
 
@@ -54,6 +59,11 @@ export function StatusNote({ status, name, now, action }: Props) {
   const look = presentationFor(status.state);
   const blocked = status.state === "blocked";
   const initial = name.trim().slice(0, 1).toUpperCase() || "?";
+  // For 'other', the person's own words stand in for the generic state name.
+  const label =
+    status.state === "other" && status.custom_label
+      ? status.custom_label
+      : look.label;
 
   return (
     <div
@@ -73,17 +83,33 @@ export function StatusNote({ status, name, now, action }: Props) {
         {/* Left padding clears the avatar overhanging from above. */}
         <header className="flex min-h-9 items-center justify-between gap-2 pl-11">
           <h3 className="truncate text-sm font-medium tracking-tight">{name}</h3>
-          {action}
+          <div className="flex items-center gap-2">
+            {status.duration_minutes != null && (
+              <span
+                className="annotation rounded-full border px-2 py-0.5 text-[0.65rem] whitespace-nowrap"
+                style={{
+                  color: "inherit",
+                  opacity: 0.7,
+                  borderColor:
+                    "color-mix(in oklab, currentColor 30%, transparent)",
+                }}
+                title={`Planned for ${status.duration_minutes} minutes`}
+              >
+                {status.duration_minutes}M
+              </span>
+            )}
+            {action}
+          </div>
         </header>
 
-        <p className="note-text flex-1 text-lg">{status.note ?? look.label}</p>
+        <p className="note-text flex-1 text-lg">{status.note ?? label}</p>
 
         <footer className="flex items-end justify-between gap-3">
           <span
             className="annotation truncate"
             style={{ color: "inherit", opacity: 0.65 }}
           >
-            {status.ticket_ref ?? look.label}
+            {status.ticket_ref ?? label}
           </span>
           <span
             className="annotation whitespace-nowrap"

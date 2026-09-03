@@ -46,6 +46,7 @@
   --color-state-meeting: oklch(72% 0.16 65); /* amber */
   --color-state-break: oklch(66% 0.15 165); /* mint */
   --color-state-off: oklch(62% 0.03 295); /* quiet violet-grey */
+  --color-state-other: oklch(58% 0.045 250); /* slate — a custom state */
 
   /* --- Type -------------------------------------------------------------- */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
