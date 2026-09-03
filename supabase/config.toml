@@ -251,6 +251,22 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Branded templates, so Mailpit shows locally what the hosted project sends.
+# These files are the source of truth: paste them into
+# Dashboard -> Authentication -> Emails when they change, because the hosted
+# project does not read this file.
+#
+# signInWithOtp() picks the template by whether the address already exists:
+# an existing user gets magic_link, a brand new one gets confirmation. Both are
+# reachable from /login, so both are branded.
+[auth.email.template.magic_link]
+subject = "Your Workspace sign-in link"
+content_path = "./supabase/templates/magic-link.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your email for Workspace"
+content_path = "./supabase/templates/confirm-signup.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true
