@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { TopBar } from "@/components/top-bar";
 import { getViewer } from "@/lib/queries";
 
@@ -23,6 +25,12 @@ export default async function AppLayout({
       </div>
     );
   }
+
+  // Every route in this group reads by team_id. Rather than have each one
+  // render its own version of "you're not on a team yet", the whole group
+  // routes to the one screen that fixes it. /onboarding lives outside this
+  // layout, so there is no loop.
+  if (!viewer.profile.team_id) redirect("/onboarding");
 
   return (
     <div className="drafting-grid min-h-dvh">

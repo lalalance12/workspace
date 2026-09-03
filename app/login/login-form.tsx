@@ -3,33 +3,20 @@
 import { useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { authCallbackURL } from "@/lib/site-url";
 
-/** Google OAuth and magic link. No passwords in the product. */
+/**
+ * Magic link only. No passwords, no OAuth providers.
+ *
+ * The redirect is built from the configured site URL rather than the current
+ * origin — see lib/site-url.ts for why that distinction matters once the link
+ * has to survive a trip through an inbox.
+ */
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  async function signInWithGoogle() {
-    setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-
-    if (!error) return;
-
-    // "Unsupported provider: provider is not enabled" means nobody has
-    // configured Google yet, which is a setup step, not something the person
-    // signing in can fix. Point them at the path that does work.
-    setError(
-      /provider is not enabled/i.test(error.message)
-        ? "Google sign-in isn't set up on this project yet. Use the email link below."
-        : error.message,
-    );
-  }
 
   async function sendMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -38,23 +25,36 @@ export function LoginForm() {
 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      email: email.trim(),
+      options: { emailRedirectTo: authCallbackURL() },
     });
 
     setPending(false);
-    if (error) setError(error.message);
-    else setSent(true);
+
+    if (!error) {
+      setSent(true);
+      return;
+    }
+
+    // Supabase rate-limits sign-in emails per address and per project. Saying
+    // so beats the raw "For security purposes..." string, which reads like a
+    // rejection rather than a wait.
+    setError(
+      /rate limit|too many requests|for security purposes/i.test(error.message)
+        ? "That's a few links in a short window. Wait a minute, then try again."
+        : error.message,
+    );
   }
 
   if (sent) {
     return (
       <div className="dimension-rule pt-6">
         <p className="text-sm">Check {email} for a sign-in link.</p>
+        <p className="annotation mt-2">It expires in an hour</p>
         <button
           type="button"
           onClick={() => setSent(false)}
-          className="annotation mt-3 cursor-pointer underline"
+          className="annotation mt-4 cursor-pointer underline"
         >
           Use a different address
         </button>
@@ -64,39 +64,34 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col gap-5">
-      <button
-        type="button"
-        onClick={signInWithGoogle}
-        className="cursor-pointer border border-[var(--ink)]/25 px-4 py-2.5 text-sm"
-        style={{ borderRadius: "var(--radius-sheet)" }}
-      >
-        Continue with Google
-      </button>
-
-      <div className="dimension-rule pt-5">
-        <form onSubmit={sendMagicLink} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-2">
-            <span className="annotation">Or by email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="border border-[var(--ink)]/25 bg-transparent px-3 py-2"
-              style={{ borderRadius: "var(--radius-sheet)" }}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="cursor-pointer bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--paper)] disabled:opacity-60"
+      <form onSubmit={sendMagicLink} className="flex flex-col gap-3">
+        <label className="flex flex-col gap-2">
+          <span className="annotation">Email</span>
+          <input
+            type="email"
+            required
+            autoFocus
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            className="border border-[var(--ink)]/25 bg-transparent px-3 py-2"
             style={{ borderRadius: "var(--radius-sheet)" }}
-          >
-            {pending ? "Sending…" : "Send sign-in link"}
-          </button>
-        </form>
-      </div>
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={pending}
+          className="cursor-pointer bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--paper)] disabled:opacity-60"
+          style={{ borderRadius: "var(--radius-sheet)" }}
+        >
+          {pending ? "Sending…" : "Send sign-in link"}
+        </button>
+      </form>
+
+      <p className="text-sm text-[var(--ink-soft)]">
+        No password. We email you a link that signs you in.
+      </p>
 
       {error && (
         <p role="alert" className="border-l-2 border-[var(--signal)] py-2 pl-3 text-sm">

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { BoardView } from "./board-view";
 import { getBoardData, getViewer } from "@/lib/queries";
@@ -11,9 +11,9 @@ export default async function BoardPage() {
   const viewer = await getViewer();
   if (!viewer) return null;
 
-  if (!viewer.profile.team_id) {
-    return <NoTeam />;
-  }
+  // The layout already sent teamless viewers to /onboarding; this repeats the
+  // check only to narrow the type.
+  if (!viewer.profile.team_id) redirect("/onboarding");
 
   const { members, statuses } = await getBoardData(viewer.profile.team_id);
 
@@ -32,18 +32,5 @@ export default async function BoardPage() {
         serverNow={Date.now()}
       />
     </>
-  );
-}
-
-function NoTeam() {
-  return (
-    <div className="dimension-rule mt-10 pt-8 text-center">
-      <p className="text-lg">You&rsquo;re not on a team yet.</p>
-      <p className="annotation mt-2">
-        <Link href="/settings/me" className="underline">
-          Create one to start posting
-        </Link>
-      </p>
-    </div>
   );
 }

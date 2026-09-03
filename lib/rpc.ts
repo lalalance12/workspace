@@ -18,7 +18,7 @@ export type Client = SupabaseClient<Database>;
 
 /** SQLSTATE -> what the person should read, and what they can do next. */
 export const RPC_MESSAGES: Record<string, string> = {
-  WS001: "You're not on a team yet. Create or join one from Settings first.",
+  WS001: "You're not on a team yet. Join one with a code, or create one.",
   WS002:
     "You already nudged them in the last hour. Message them directly instead.",
   WS003: "That's all your nudges for this hour. Message them directly instead.",

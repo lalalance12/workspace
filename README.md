@@ -23,7 +23,7 @@ The whole backend is Postgres. No Edge Functions, no third-party services.
 
 ## Environment
 
-Two variables. That's the whole file.
+Three variables. That's the whole file.
 
 ```bash
 cp .env.example .env.local
@@ -33,6 +33,7 @@ cp .env.example .env.local
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Dashboard → Project Settings → Data API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Dashboard → Project Settings → API Keys → Publishable key |
+| `NEXT_PUBLIC_SITE_URL` | The domain this deployment answers on. Blank locally. |
 
 The **publishable key** is the new name for the anon key (`sb_publishable_…`
 rather than a JWT). They are interchangeable and both are safe in the browser —
@@ -79,10 +80,15 @@ Mailpit.
 
 ### Getting onto a team
 
-A fresh signup has a profile but no team, and nothing works until they have one.
-`/settings/me` offers both paths: create a team (you become its head) or enter a
-**join code**. The code is eight characters with no ambiguous glyphs, shown on
+A fresh signup has a profile but no team, and nothing works until they have one,
+so the `(app)` layout sends anyone without a `team_id` to **`/onboarding`**. It
+offers both paths side by side: enter a **join code**, or name a team and become
+its head. The code is eight characters with no ambiguous glyphs, shown on
 `/settings/team`. Anyone holding it can join, so the head can rotate it.
+
+`/onboarding` sits outside the `(app)` group on purpose — there is no board and
+no nudge policy to navigate to until you belong somewhere, so there is no top
+bar either.
 
 ## Running against the hosted project
 
@@ -95,8 +101,36 @@ Then enable **pg_cron** (Dashboard → Database → Extensions) and re-run
 `db push` — `20260805090600_scheduler.sql` skips scheduling with a notice if the
 extension isn't available, rather than failing the whole migration.
 
-For Google OAuth, add the provider in Dashboard → Authentication → Providers and
-set the redirect URL to `https://<your-domain>/auth/callback`.
+### Sign-in in production
+
+Magic link only — no passwords, no OAuth providers. Three things have to agree,
+or the link fails *after* someone clicks it rather than before:
+
+1. **`NEXT_PUBLIC_SITE_URL`** on the host (Vercel → Settings → Environment
+   Variables) set to the production domain. `lib/site-url.ts` builds
+   `emailRedirectTo` from it. Give it type **Config**, not Secret — anything
+   named `NEXT_PUBLIC_*` is inlined into the browser bundle by design, and
+   Vercel refuses to mark a public-prefixed variable write-only.
+2. **Supabase → Authentication → URL Configuration**
+   - *Site URL*: `https://your-app.vercel.app`
+   - *Redirect URLs*: `https://your-app.vercel.app/**`, plus
+     `https://*-<your-team>.vercel.app/**` if preview deploys should sign in too.
+
+   An origin missing from this allowlist is silently dropped and the person is
+   returned to the Site URL instead, which looks exactly like a broken link.
+3. **Authentication → Emails → Magic Link.** Leave the body on
+   `{{ .ConfirmationURL }}`. It already carries the redirect through the auth
+   server's verify endpoint and back to `/auth/callback` with the `?code=` that
+   `exchangeCodeForSession()` expects. Hardcoding a host there breaks every
+   environment but one.
+
+The login screen says the link expires in an hour, which matches the default
+*Email OTP expiry*. Change one and change the other.
+
+**Before a real team uses this, configure custom SMTP.** Supabase's built-in
+email sender only delivers to your own project members and is rate-limited to a
+handful of messages an hour — fine for testing, useless the moment a colleague
+tries to sign in.
 
 ## Commands
 
