@@ -1,4 +1,5 @@
 import { MeSettingsForm } from "./me-settings-form";
+import { PasswordSettingsForm } from "./password-settings-form";
 import { PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
 
@@ -9,7 +10,11 @@ export default async function MeSettingsPage() {
   return (
     <>
       <PageHeader title="Your settings" meta={viewer.profile.display_name} />
-      <MeSettingsForm profile={viewer.profile} />
+
+      <div className="flex flex-col gap-10">
+        <MeSettingsForm profile={viewer.profile} />
+        <PasswordSettingsForm />
+      </div>
     </>
   );
 }

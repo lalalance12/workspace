@@ -103,8 +103,14 @@ extension isn't available, rather than failing the whole migration.
 
 ### Sign-in in production
 
-Magic link only — no passwords, no OAuth providers. Three things have to agree,
-or the link fails *after* someone clicks it rather than before:
+Two ways in, no OAuth providers: an emailed **magic link**, or **email and
+password**. They are two credentials on one identity, not two kinds of user —
+someone who started with a link sets a password from `/settings/me`, and the
+link keeps working afterwards. There is no password reset flow on purpose: the
+email link already is one.
+
+The link half is the fragile half. Three things have to agree, or it fails
+*after* someone clicks rather than before:
 
 1. **`NEXT_PUBLIC_SITE_URL`** on the host (Vercel → Settings → Environment
    Variables) set to the production domain. `lib/site-url.ts` builds

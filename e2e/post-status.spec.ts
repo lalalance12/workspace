@@ -16,9 +16,12 @@ test("log in, post a status, see it on the board", async ({ page }) => {
   await clearMailbox();
 
   await page.goto("/login");
+  // Password is the default method; this flow deliberately exercises the magic
+  // link, because that is the path that touches real email.
+  await page.getByTestId("toggle-sign-in-method").click();
   await page.getByPlaceholder("you@company.com").fill(EMAIL);
   await page.getByRole("button", { name: "Send sign-in link" }).click();
-  await expect(page.getByText(`Check ${EMAIL}`)).toBeVisible();
+  await expect(page.getByText(EMAIL)).toBeVisible();
 
   await page.goto(await magicLinkFor(EMAIL));
   await expect(page).toHaveURL(/\/board$/);

@@ -25,11 +25,22 @@ export async function getViewer() {
 
   // Swallowing this is how a missing GRANT turns into an infinite
   // /board -> /login -> /board redirect instead of a legible failure. If the
-  // row can't be read, say why.
+  // row can't be read, say why — and say which of the two very different
+  // causes it is, because "fix the policy" is useless advice when the table
+  // itself was never created.
   if (error) {
+    // PGRST205: PostgREST looked for the table and its schema cache has no
+    // such relation. On a hosted project that almost always means the
+    // migrations were never pushed, not that a policy is wrong.
+    const missingTable =
+      error.code === "PGRST205" || /schema cache/i.test(error.message);
+
     throw new Error(
-      `Could not read your profile: ${error.message}. This is a policy or ` +
-        `privilege problem in supabase/migrations, not a client bug.`,
+      missingTable
+        ? `Could not read your profile: ${error.message}. This project has no ` +
+            `schema yet — run "supabase link" then "supabase db push" against it.`
+        : `Could not read your profile: ${error.message}. This is a policy or ` +
+            `privilege problem in supabase/migrations, not a client bug.`,
     );
   }
 

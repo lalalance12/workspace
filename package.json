@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > lib/database.types.ts"
+    "db:types": "supabase gen types typescript --local > lib/database.types.ts",
+    "db:bundle": "node scripts/bundle-schema.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

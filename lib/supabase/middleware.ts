@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/env";
 
 /** Routes reachable without a session. */
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
 
 /**
  * Refreshes the auth session on every request and redirects signed-out users
@@ -71,7 +71,11 @@ export async function updateSession(request: NextRequest) {
   );
 
   if (!user && !isPublic) return redirectTo("/login", request, response);
-  if (user && pathname === "/login") return redirectTo("/board", request, response);
+
+  // Someone already signed in has no business on the front door.
+  if (user && (pathname === "/login" || pathname === "/signup")) {
+    return redirectTo("/board", request, response);
+  }
 
   return response;
 }
