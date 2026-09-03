@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 export interface NavItem {
@@ -39,9 +39,28 @@ export function NavLinks({ items }: { items: NavItem[] }) {
                 style={{ backgroundImage: "var(--gradient-brand)" }}
               />
             )}
+            <PendingUnderline />
           </Link>
         );
       })}
     </nav>
   );
+}
+
+/**
+ * Marks the link you just clicked while its route resolves.
+ *
+ * useLinkStatus only reports for the Link it is rendered inside, which is why
+ * this is a child component rather than state in NavLinks — the pending flag
+ * belongs to one link, not to the bar.
+ *
+ * Without it, clicking a nav item does nothing visible until the new page's
+ * skeleton paints, and a control that looks inert for 200ms invites a second
+ * click.
+ */
+function PendingUnderline() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+
+  return <span aria-hidden="true" className="nav-pending inset-x-3" />;
 }

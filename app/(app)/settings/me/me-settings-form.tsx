@@ -29,6 +29,7 @@ interface Profile {
 export function MeSettingsForm({ profile }: { profile: Profile }) {
   const router = useRouter();
 
+  const [displayName, setDisplayName] = useState(profile.display_name);
   const [messageLink, setMessageLink] = useState(profile.message_link ?? "");
   const [peer, setPeer] = useState(profile.peer_nudges_enabled);
   const [system, setSystem] = useState(profile.system_nudges_enabled);
@@ -40,11 +41,21 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
     e.preventDefault();
     setError(null);
     setSaved(false);
+
+    // The name is what the whole team reads on your card. An empty one leaves
+    // a blank pinned to the board, so refuse it here rather than letting a
+    // not-null constraint say something less useful.
+    if (!displayName.trim()) {
+      setError("Your name can't be empty — it's what the team sees on your card.");
+      return;
+    }
+
     setPending(true);
 
     const { error: err } = await createClient()
       .from("profiles")
       .update({
+        display_name: displayName.trim(),
         message_link: messageLink.trim() || null,
         peer_nudges_enabled: peer,
         system_nudges_enabled: system,
@@ -62,6 +73,18 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
   return (
     <form onSubmit={onSave} className="flex max-w-lg flex-col gap-6">
       <Panel className="flex flex-col gap-6 p-6">
+        <Field label="Name" hint="Shown on your card, in the timeline and on nudges.">
+          <Input
+            required
+            maxLength={60}
+            autoComplete="name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Lance"
+            data-testid="display-name"
+          />
+        </Field>
+
         <Field
           label="Where a nudge sends people"
           hint="Workspace never carries the conversation. This is where it points."
