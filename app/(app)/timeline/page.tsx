@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TimelineDatePicker } from "./date-picker";
 import { TimelineView, type TimelineRow } from "./timeline-view";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
@@ -72,11 +73,6 @@ export default async function TimelinePage({
   today.setHours(0, 0, 0, 0);
   const isToday = from.getTime() === today.getTime();
 
-  const prev = new Date(from);
-  prev.setDate(prev.getDate() - 1);
-  const next = new Date(from);
-  next.setDate(next.getDate() + 1);
-
   return (
     <>
       <PageHeader
@@ -84,37 +80,10 @@ export default async function TimelinePage({
         meta={`${count} update${count === 1 ? "" : "s"}`}
       />
 
-      {/* Day navigation. Links, not state: the day belongs in the URL. */}
-      <nav className="mb-6 flex flex-wrap items-center gap-2">
-        <Link href={`/timeline?date=${isoDay(prev)}`} className="btn btn-quiet px-3 py-1.5 text-xs">
-          ← Previous
-        </Link>
-
-        <span className="px-2 text-sm font-medium">
-          {isToday
-            ? "Today"
-            : from.toLocaleDateString([], {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-        </span>
-
-        {/* Forward is pointless past today — nothing has happened yet. */}
-        {!isToday && (
-          <Link href={`/timeline?date=${isoDay(next)}`} className="btn btn-quiet px-3 py-1.5 text-xs">
-            Next →
-          </Link>
-        )}
-
-        {!isToday && (
-          <Link href="/timeline" className="btn btn-quiet px-3 py-1.5 text-xs">
-            Today
-          </Link>
-        )}
-
-        <span className="annotation ml-auto">{isoDay(from)}</span>
-      </nav>
+      {/* The day lives in the URL; the picker just pushes it. */}
+      <div className="mb-6">
+        <TimelineDatePicker selected={isoDay(from)} isToday={isToday} />
+      </div>
 
       {count === 0 ? (
         <EmptyState
