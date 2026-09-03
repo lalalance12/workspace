@@ -19,25 +19,30 @@ export interface PeerNudge {
  * "Someone wants you" — shown at the top of the board when a peer nudge is
  * open against you.
  *
- * Two actions and no third: go to the conversation, or acknowledge that you
- * saw it. Acknowledging notifies the sender so they know to expect you, which
- * is the whole point of a nudge closing the loop rather than evaporating.
+ * Two actions and no third: go to the conversation, or acknowledge that you saw
+ * it. Acknowledging notifies the sender so they know to expect you, which is the
+ * point of a nudge closing the loop rather than evaporating.
  *
- * Nudges stack, so this renders every open one rather than only the newest.
+ * The caller passes the LATEST open nudge only. Peer nudges stack by design, but
+ * a stack of banners turns the board into an inbox — the one thing this product
+ * refuses to be. Anything older is counted here and read in the bell, where a
+ * list belongs.
  */
 export function NudgeBanner({
   nudges,
+  olderCount = 0,
   nameFor,
   onAcknowledged,
 }: {
   nudges: PeerNudge[];
+  olderCount?: number;
   nameFor: (id: string | null) => string;
   onAcknowledged: (id: string) => void;
 }) {
   if (nudges.length === 0) return null;
 
   return (
-    <div className="mb-6 flex flex-col gap-3">
+    <div className="mb-6 flex flex-col gap-2">
       {nudges.map((nudge) => (
         <NudgeRow
           key={nudge.id}
@@ -46,6 +51,12 @@ export function NudgeBanner({
           onAcknowledged={onAcknowledged}
         />
       ))}
+
+      {olderCount > 0 && (
+        <p className="annotation pl-1">
+          {olderCount} earlier nudge{olderCount === 1 ? "" : "s"} — see the bell
+        </p>
+      )}
     </div>
   );
 }

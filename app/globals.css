@@ -369,43 +369,35 @@ h3 {
     rotate 420ms ease;
 }
 
-/* The accent edge. Full chroma at the top, draining downward — the clearest
-   read of "how lit is this card" at board scale. */
-.note::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  border-radius: var(--radius-card) 0 0 var(--radius-card);
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 100%), transparent),
-    color-mix(in oklab, var(--state) calc(var(--tint) * 25%), transparent)
-  );
-}
-
-/* < 1h — lit. */
-.note[data-decay="fresh"] {
+/* The tint ladder lives on any element carrying data-decay, not just .note.
+   The avatar has to age with its card and cannot live inside one: the curl is a
+   clip-path, and a clip-path cuts off every child that crosses the boundary. So
+   the wrapper carries the tier and both halves inherit --tint from it. */
+[data-decay="fresh"] {
   --tint: 1;
-  rotate: 0deg;
 }
-
-/* 1–3h — the glow starts to go. */
-.note[data-decay="soft"] {
+[data-decay="soft"] {
   --tint: 0.72;
+}
+[data-decay="curl"] {
+  --tint: 0.42;
+}
+[data-decay="stale"] {
+  --tint: 0.14;
+}
+
+/* Geometry stays on the card itself. */
+.note[data-decay="fresh"],
+.note[data-decay="soft"] {
   rotate: 0deg;
 }
 
-/* 3–6h — colour mostly gone, corner curls, card tilts. */
 .note[data-decay="curl"] {
-  --tint: 0.42;
   --curl: 16px;
   rotate: -1.1deg;
 }
 
-/* > 6h — unlit. Neutral, dim, pronounced curl. */
 .note[data-decay="stale"] {
-  --tint: 0.14;
   --curl: 24px;
   rotate: -2deg;
 }
@@ -468,14 +460,6 @@ h3 {
 .note[data-blocked="true"]::after {
   display: none;
 }
-.note[data-blocked="true"]::before {
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, white 85%, transparent),
-    color-mix(in oklab, white 25%, transparent)
-  );
-}
-
 @keyframes note-breathe {
   0%,
   100% {
@@ -490,6 +474,74 @@ h3 {
       0 18px 38px -16px
         color-mix(in oklab, var(--color-state-blocked) 95%, transparent);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   The avatar.
+
+   Foundation for real profile pictures; for now it is the first letter of the
+   name. It overhangs the top-left of the card, which is why it is a SIBLING of
+   .note rather than a child — the curl is a clip-path, and a clip-path cuts off
+   anything that crosses the card's edge.
+
+   Its ring carries the state colour, mixed against --tint like everything else,
+   so it drains as the card ages. That replaced a 3px bar down the card's left
+   edge: with the avatar sitting there too, two state cues were fighting over
+   the same three pixels.
+--------------------------------------------------------------------------- */
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: white;
+  user-select: none;
+  background-color: color-mix(
+    in oklab,
+    var(--state) calc(var(--tint) * 100%),
+    var(--color-state-off)
+  );
+  /* The ring cuts the circle out of the card behind it, so it reads as sitting
+     on top rather than punched into the surface. */
+  box-shadow:
+    0 0 0 3px var(--canvas),
+    0 2px 8px -2px color-mix(in oklab, var(--ink) 35%, transparent);
+  transition:
+    background-color 420ms ease,
+    box-shadow 420ms ease;
+}
+
+/* On a blocked card the ground is already full-chroma signal, so the avatar
+   inverts to stay legible against it. */
+.note-wrap[data-blocked="true"] .avatar {
+  background-color: white;
+  color: var(--color-state-blocked);
+}
+
+/* A small pill in the card header. Used for "Nudged", which is public on
+   purpose — nudging in the open is what keeps it social. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-pill);
+  padding: 0.125rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--violet);
+  background: color-mix(in oklab, var(--violet) 12%, transparent);
+}
+.note[data-blocked="true"] .tag {
+  color: white;
+  background: color-mix(in oklab, white 22%, transparent);
 }
 
 /* The state marker on a card. Mixes with --tint like everything else, so it

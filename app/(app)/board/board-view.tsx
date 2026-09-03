@@ -159,7 +159,21 @@ export function BoardView({
     };
   }, [teamId, viewerId]);
 
-  const mine = nudges.filter((n) => n.recipient_id === viewerId);
+  // The board shows the latest open nudge against you and nothing else. Peer
+  // nudges stack by design, but a stack of banners turns the board into an
+  // inbox — which is the one thing this product refuses to be. The full history
+  // lives in the bell, where a list belongs.
+  const latestForMe = nudges
+    .filter((n) => n.recipient_id === viewerId)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+    .slice(0, 1);
+
+  const olderForMe =
+    nudges.filter((n) => n.recipient_id === viewerId).length - latestForMe.length;
+
   const nudgedIds = new Set(nudges.map((n) => n.recipient_id));
 
   const pinned = members
@@ -171,7 +185,8 @@ export function BoardView({
   return (
     <>
       <NudgeBanner
-        nudges={mine}
+        nudges={latestForMe}
+        olderCount={olderForMe}
         nameFor={nameFor}
         onAcknowledged={(id) =>
           setNudges((prev) => prev.filter((n) => n.id !== id))
@@ -218,7 +233,7 @@ export function BoardView({
                 >
                   {online.has(member.id) && (
                     <span
-                      className="absolute -top-1 -right-1 z-10 size-3 rounded-full ring-2"
+                      className="absolute top-2 -right-1 z-20 size-3 rounded-full ring-2"
                       style={{
                         backgroundImage: "var(--gradient-brand)",
                         ["--tw-ring-color" as string]: "var(--canvas)",
@@ -238,50 +253,42 @@ export function BoardView({
                       status={status}
                       name={member.display_name}
                       now={now}
+                      action={
+                        <span className="relative flex shrink-0 items-center gap-1.5">
+                          {/* Nudged is public on purpose — nudging in the open
+                              keeps it social. */}
+                          {nudgedIds.has(member.id) && (
+                            <span className="tag">Nudged</span>
+                          )}
+
+                          {canNudge && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setComposingFor((v) =>
+                                  v === member.id ? null : member.id,
+                                )
+                              }
+                              aria-expanded={composingFor === member.id}
+                              aria-label={`Nudge ${member.display_name}`}
+                              className="btn btn-quiet px-2.5 py-1 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                            >
+                              Nudge
+                            </button>
+                          )}
+
+                          {composingFor === member.id && (
+                            <NudgeComposer
+                              recipientId={member.id}
+                              recipientName={member.display_name}
+                              onClose={() => setComposingFor(null)}
+                              onSent={() => setComposingFor(null)}
+                            />
+                          )}
+                        </span>
+                      }
                     />
                   </motion.div>
-
-                  {/* Nudged marker. Team-wide on purpose — nudging in the open
-                      keeps it social. */}
-                  {nudgedIds.has(member.id) && (
-                    <span
-                      className="annotation absolute bottom-3 left-5 flex items-center gap-1.5"
-                      style={{ color: "var(--violet)" }}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="size-1.5 rounded-full"
-                        style={{ background: "var(--violet)" }}
-                      />
-                      Nudged
-                    </span>
-                  )}
-
-                  {canNudge && (
-                    <div className="absolute top-2 right-2 z-20">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setComposingFor((v) =>
-                            v === member.id ? null : member.id,
-                          )
-                        }
-                        aria-expanded={composingFor === member.id}
-                        className="btn btn-quiet px-2.5 py-1.5 text-xs opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-                      >
-                        Nudge
-                      </button>
-
-                      {composingFor === member.id && (
-                        <NudgeComposer
-                          recipientId={member.id}
-                          recipientName={member.display_name}
-                          onClose={() => setComposingFor(null)}
-                          onSent={() => setComposingFor(null)}
-                        />
-                      )}
-                    </div>
-                  )}
                 </motion.div>
               );
             })}
