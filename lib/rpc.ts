@@ -28,6 +28,8 @@ export const RPC_MESSAGES: Record<string, string> = {
   WS007: "A nudge carries at most 80 characters. Trim it and send again.",
   WS008: "You're already on a team.",
   WS009: "That join code doesn't match a team. Check it with whoever sent it.",
+  WS010: "A duration must be 1, 15, 30, 45 or 60 minutes.",
+  WS011: "Tell us what you're on — an Other status needs a label.",
   // Raised by the one-open-status-per-person index if two writes race.
   "23505": "That update collided with another one. Try posting it again.",
 };
@@ -74,6 +76,15 @@ export interface SetStatusInput {
   state: StatusState;
   note?: string | null;
   ticketRef?: string | null;
+  /** How long they expect to be on this. One of 1/15/30/45/60, or null. */
+  durationMinutes?: number | null;
+  /**
+   * State to switch to automatically when the duration elapses. Only meaningful
+   * alongside a duration; null means the status just ages in place.
+   */
+  autoSwitchTo?: StatusState | null;
+  /** Free-text label for the 'other' state. Ignored for every other state. */
+  customLabel?: string | null;
 }
 
 /**
@@ -88,6 +99,9 @@ export async function setStatus(client: Client, input: SetStatusInput) {
     p_state: input.state,
     p_note: input.note ?? undefined,
     p_ticket_ref: input.ticketRef ?? undefined,
+    p_duration_minutes: input.durationMinutes ?? undefined,
+    p_auto_switch_to: input.autoSwitchTo ?? undefined,
+    p_custom_label: input.customLabel ?? undefined,
   });
   return unwrap(data, error);
 }

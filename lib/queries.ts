@@ -65,7 +65,9 @@ export async function getBoardData(teamId: string) {
       .order("display_name"),
     supabase
       .from("status_updates")
-      .select("id, profile_id, state, note, ticket_ref, started_at")
+      .select(
+        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, started_at",
+      )
       .eq("team_id", teamId)
       .is("ended_at", null),
   ]);
@@ -79,7 +81,9 @@ export async function getMyStatus(profileId: string) {
 
   const { data } = await supabase
     .from("status_updates")
-    .select("id, profile_id, state, note, ticket_ref, started_at")
+    .select(
+      "id, profile_id, state, note, ticket_ref, duration_minutes, auto_switch_to, custom_label, started_at",
+    )
     .eq("profile_id", profileId)
     .is("ended_at", null)
     .maybeSingle();

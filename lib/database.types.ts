@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -323,7 +328,10 @@ export type Database = {
       }
       status_updates: {
         Row: {
+          auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
+          custom_label: string | null
+          duration_minutes: number | null
           ended_at: string | null
           id: string
           note: string | null
@@ -334,7 +342,10 @@ export type Database = {
           ticket_ref: string | null
         }
         Insert: {
+          auto_switch_to?: Database["public"]["Enums"]["status_state"] | null
           created_at?: string
+          custom_label?: string | null
+          duration_minutes?: number | null
           ended_at?: string | null
           id?: string
           note?: string | null
@@ -345,7 +356,10 @@ export type Database = {
           ticket_ref?: string | null
         }
         Update: {
+          auto_switch_to?: Database["public"]["Enums"]["status_state"] | null
           created_at?: string
+          custom_label?: string | null
+          duration_minutes?: number | null
           ended_at?: string | null
           id?: string
           note?: string | null
@@ -466,6 +480,7 @@ export type Database = {
       }
       current_team_id: { Args: never; Returns: string }
       enqueue_due_nudges: { Args: never; Returns: number }
+      expire_due_durations: { Args: never; Returns: number }
       generate_join_code: { Args: never; Returns: string }
       is_team_head: { Args: never; Returns: boolean }
       join_team: {
@@ -496,7 +511,10 @@ export type Database = {
           p_ticket_ref?: string
         }
         Returns: {
+          auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
+          custom_label: string | null
+          duration_minutes: number | null
           ended_at: string | null
           id: string
           note: string | null
@@ -540,12 +558,18 @@ export type Database = {
       }
       set_status: {
         Args: {
+          p_auto_switch_to?: Database["public"]["Enums"]["status_state"]
+          p_custom_label?: string
+          p_duration_minutes?: number
           p_note?: string
           p_state: Database["public"]["Enums"]["status_state"]
           p_ticket_ref?: string
         }
         Returns: {
+          auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
+          custom_label: string | null
+          duration_minutes: number | null
           ended_at: string | null
           id: string
           note: string | null
@@ -579,6 +603,7 @@ export type Database = {
         | "break"
         | "done_for_day"
         | "off"
+        | "other"
       team_role: "head" | "member"
     }
     CompositeTypes: {
@@ -595,12 +620,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -624,11 +649,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -649,11 +674,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -674,11 +699,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -691,11 +716,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -726,9 +751,9 @@ export const Constants = {
         "break",
         "done_for_day",
         "off",
+        "other",
       ],
       team_role: ["head", "member"],
     },
   },
 } as const
-

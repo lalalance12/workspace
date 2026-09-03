@@ -17,7 +17,9 @@ export default async function TimelinePage() {
   const [{ data: rows }, { data: members }] = await Promise.all([
     supabase
       .from("status_updates")
-      .select("id, profile_id, state, note, ticket_ref, started_at")
+      .select(
+        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, started_at",
+      )
       .eq("team_id", viewer.profile.team_id)
       .gte("started_at", since.toISOString())
       .order("started_at", { ascending: false }),

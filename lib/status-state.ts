@@ -19,6 +19,7 @@ export const STATUS_STATES = [
   "break",
   "done_for_day",
   "off",
+  "other",
 ] as const;
 
 export type StatusState = (typeof STATUS_STATES)[number];
@@ -77,6 +78,14 @@ export const STATE_PRESENTATION: Record<StatusState, StatePresentation> = {
     accent: "var(--color-state-off)",
     onAccent: "white",
     muted: true,
+  },
+  // The escape hatch. The card shows the person's own words (custom_label)
+  // in place of this generic label whenever one is set.
+  other: {
+    label: "Other",
+    accent: "var(--color-state-other)",
+    onAccent: "white",
+    muted: false,
   },
 };
 
