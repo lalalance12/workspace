@@ -1,4 +1,5 @@
 import { MeSettingsForm } from "./me-settings-form";
+import { PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
 
 export default async function MeSettingsPage() {
@@ -7,7 +8,7 @@ export default async function MeSettingsPage() {
 
   return (
     <>
-      <h1 className="mb-8 text-2xl tracking-tight">Your settings</h1>
+      <PageHeader title="Your settings" meta={viewer.profile.display_name} />
       <MeSettingsForm profile={viewer.profile} />
     </>
   );

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
+import { Panel } from "@/components/ui/page";
 import { messageForError } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,57 +60,39 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form onSubmit={onSave} className="flex max-w-md flex-col gap-6">
-      <label className="flex flex-col gap-2">
-        <span className="annotation">Where a nudge sends people</span>
-        <input
-          type="url"
-          value={messageLink}
-          onChange={(e) => setMessageLink(e.target.value)}
-          placeholder="https://slack.com/app_redirect?channel=you"
-          className="border border-[var(--ink)]/25 bg-transparent px-3 py-2"
-          style={{ borderRadius: "var(--radius-sheet)" }}
-        />
-        <span className="text-sm text-[var(--ink-soft)]">
-          Workspace never carries the conversation. This is where it points.
-        </span>
-      </label>
-
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          checked={peer}
-          onChange={(e) => setPeer(e.target.checked)}
-        />
-        Let teammates nudge me
-      </label>
-
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          checked={system}
-          onChange={(e) => setSystem(e.target.checked)}
-        />
-        Ask me when my status goes stale
-      </label>
-
-      <div className="dimension-rule pt-5">
-        <button
-          type="submit"
-          disabled={pending}
-          className="cursor-pointer bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--paper)] disabled:opacity-60"
-          style={{ borderRadius: "var(--radius-sheet)" }}
+    <form onSubmit={onSave} className="flex max-w-lg flex-col gap-6">
+      <Panel className="flex flex-col gap-6 p-6">
+        <Field
+          label="Where a nudge sends people"
+          hint="Workspace never carries the conversation. This is where it points."
         >
+          <Input
+            type="url"
+            value={messageLink}
+            onChange={(e) => setMessageLink(e.target.value)}
+            placeholder="https://slack.com/app_redirect?channel=you"
+          />
+        </Field>
+
+        <div className="flex flex-col gap-4">
+          <span className="annotation">Interruptions</span>
+          <Toggle checked={peer} onChange={setPeer}>
+            Let teammates nudge me
+          </Toggle>
+          <Toggle checked={system} onChange={setSystem}>
+            Ask me when my status goes stale
+          </Toggle>
+        </div>
+      </Panel>
+
+      <div className="flex items-center gap-4">
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save preferences"}
-        </button>
+        </Button>
+        {saved && <span className="annotation">Saved</span>}
       </div>
 
-      {saved && <p className="annotation">Saved</p>}
-      {error && (
-        <p role="alert" className="border-l-2 border-[var(--signal)] py-2 pl-3 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <ErrorNote>{error}</ErrorNote>}
     </form>
   );
 }

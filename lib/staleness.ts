@@ -5,10 +5,10 @@
  * This module is the single source of those thresholds: the same function
  * drives the CSS tier on the note, the mono age annotation, and the tests.
  *
- *   < 1h   fresh   full saturation, crisp 2px shadow, sits flat
- *   1–3h   soft    shadow softens, paper desaturates ~15%
- *   3–6h   curl    desaturates ~35%, corner curls, note tilts 1–2°
- *   > 6h   stale   near-greyscale, pronounced curl, reads "STALE · 7H"
+ *   < 1h   fresh   lit: full tint, coloured glow, sits flat
+ *   1–3h   soft    the glow starts to go
+ *   3–6h   curl    colour mostly gone, corner curls, card tilts 1°
+ *   > 6h   stale   unlit: neutral and dim, pronounced curl, "STALE · 7H"
  *
  * Blocked notes are exempt. A blocker should never fade into the background.
  */
@@ -56,7 +56,7 @@ export interface Decay {
   age: string;
   /** Full annotation for a stale note, e.g. "STALE · 7H". Null otherwise. */
   annotation: string | null;
-  /** True when the note is held at full saturation despite its age. */
+  /** True when the card is held at full chroma despite its age. */
   exempt: boolean;
 }
 
@@ -78,7 +78,7 @@ export function decayFor(input: {
   const ageMs = Math.max(0, now - started);
   const age = formatAge(ageMs);
 
-  // Blocked is exempt from decay: signal pushpin and a slow pulse instead.
+  // Blocked is exempt from decay: it holds full chroma and breathes instead.
   const exempt = input.state === "blocked";
   const tier = exempt ? "fresh" : decayTierFor(ageMs);
 

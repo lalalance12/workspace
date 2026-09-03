@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { ErrorNote, Field, Input } from "@/components/ui/field";
 import { RpcError, createTeam, joinTeam } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
@@ -23,7 +25,10 @@ export function OnboardingChoice() {
   const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(which: Exclude<Pending, null>, action: () => Promise<unknown>) {
+  async function run(
+    which: Exclude<Pending, null>,
+    action: () => Promise<unknown>,
+  ) {
     setError(null);
     setPending(which);
     try {
@@ -45,15 +50,26 @@ export function OnboardingChoice() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="grid gap-8 md:grid-cols-2">
-        <section className="flex flex-col gap-4">
-          <div>
-            <p className="annotation">Someone invited you</p>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">
-              Paste the 8-character code from whoever runs the board.
-            </p>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Joining is the common path, so it carries the brand weight. */}
+        <section
+          className="panel relative overflow-hidden p-6"
+          style={{
+            backgroundImage:
+              "linear-gradient(160deg, color-mix(in oklab, var(--violet) 7%, var(--surface)) 0%, var(--surface) 62%)",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-0.5"
+            style={{ backgroundImage: "var(--gradient-brand)" }}
+          />
+          <p className="annotation">Someone invited you</p>
+          <h2 className="mt-2 mb-1 text-xl">Join a team</h2>
+          <p className="mb-6 text-sm text-[var(--ink-soft)]">
+            Paste the eight-character code from whoever runs the board.
+          </p>
 
           <form
             onSubmit={(e) => {
@@ -62,9 +78,8 @@ export function OnboardingChoice() {
             }}
             className="flex flex-col gap-4"
           >
-            <label className="flex flex-col gap-2">
-              <span className="annotation">Join code</span>
-              <input
+            <Field label="Join code">
+              <Input
                 required
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -72,72 +87,53 @@ export function OnboardingChoice() {
                 maxLength={8}
                 autoComplete="off"
                 spellCheck={false}
-                className="border border-[var(--ink)]/25 bg-transparent px-3 py-2 font-mono text-lg tracking-[0.3em] uppercase"
-                style={{ borderRadius: "var(--radius-sheet)" }}
+                className="text-center font-[family-name:var(--font-mono)] text-lg tracking-[0.35em] uppercase"
               />
-            </label>
-            <button
-              type="submit"
-              disabled={pending !== null}
-              data-testid="join-team"
-              className="cursor-pointer self-start bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--paper)] disabled:opacity-60"
-              style={{ borderRadius: "var(--radius-sheet)" }}
-            >
+            </Field>
+            <Button type="submit" disabled={pending !== null} data-testid="join-team">
               {pending === "join" ? "Joining…" : "Join team"}
-            </button>
+            </Button>
           </form>
         </section>
 
-        <section className="dimension-rule flex flex-col gap-4 pt-8 md:border-t-0 md:pt-0 md:pl-8">
-          <div>
-            <p className="annotation">Nobody did</p>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">
-              Start a board. You become its head, and you get the join code to
-              hand out.
-            </p>
-          </div>
+        <section className="panel p-6">
+          <p className="annotation">Nobody did</p>
+          <h2 className="mt-2 mb-1 text-xl">Start one</h2>
+          <p className="mb-6 text-sm text-[var(--ink-soft)]">
+            You become its head, and you get the join code to hand out.
+          </p>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void run("create", () => createTeam(createClient(), teamName.trim()));
+              void run("create", () =>
+                createTeam(createClient(), teamName.trim()),
+              );
             }}
             className="flex flex-col gap-4"
           >
-            <label className="flex flex-col gap-2">
-              <span className="annotation">Team name</span>
-              <input
+            <Field label="Team name">
+              <Input
                 required
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 placeholder="Product"
                 maxLength={60}
-                className="border border-[var(--ink)]/25 bg-transparent px-3 py-2"
-                style={{ borderRadius: "var(--radius-sheet)" }}
               />
-            </label>
-            <button
+            </Field>
+            <Button
               type="submit"
+              variant="quiet"
               disabled={pending !== null}
               data-testid="create-team"
-              className="cursor-pointer self-start border border-[var(--ink)]/25 px-4 py-2.5 text-sm disabled:opacity-60"
-              style={{ borderRadius: "var(--radius-sheet)" }}
             >
               {pending === "create" ? "Creating…" : "Create team"}
-            </button>
+            </Button>
           </form>
         </section>
       </div>
 
-      {error && (
-        <p
-          role="alert"
-          data-testid="onboarding-error"
-          className="border-l-2 border-[var(--signal)] py-2 pl-3 text-sm"
-        >
-          {error}
-        </p>
-      )}
+      {error && <ErrorNote testId="onboarding-error">{error}</ErrorNote>}
     </div>
   );
 }

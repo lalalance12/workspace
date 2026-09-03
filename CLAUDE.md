@@ -142,48 +142,72 @@ failed and what to do — never a bare "Something went wrong."
 
 ## Design direction
 
-**Architectural drafting.** The office view genuinely is a floor plan, so the
-whole interface is built like a working drawing: drafting paper, thin structural
-rules, dimension lines, annotations set in mono caps. Warm paper notes pinned
-onto a cool technical ground. Deliberately *not* a generic SaaS dashboard.
+**Lit and unlit.** The product is about attention over time: a status is worth
+something when it is fresh and worth less every hour it sits there. So light is
+the design language. A fresh card is lit — saturated tint, a coloured glow
+underneath, full chroma. As it ages the light drains out until the card is
+neutral, dim and curling at the corner.
 
-Tokens live in `app/globals.css` as Tailwind v4 `@theme` values, aliased to the
-spec's names (`--paper`, `--ink`, `--signal`, …) so both spellings work.
+The gradient is therefore never decoration. `--tint` is set by the decay tier
+and every colour on a card is mixed against it with `color-mix()`, which makes
+the palette itself the staleness signal. If you add a gradient that does not
+encode something true, take it out.
 
-State colors: `working` → note-plain, `reviewing` → note-cyan, `blocked` →
-signal, `in_meeting` → note-rose, `break` → note-mint, `done_for_day` / `off` →
-desaturated paper-deep. Mapped in `lib/status-state.ts`.
+Ground is an **off-white with a violet cast**, never pure white — a screen
+people keep open all day should feel like paper under a warm lamp, not a
+spreadsheet.
+
+Tokens live in `app/globals.css` as Tailwind v4 `@theme` values, aliased in
+`:root` to short names (`--canvas`, `--ink`, `--violet`, `--signal`, …) so both
+spellings work.
+
+State colours are one token each — `--color-state-working` (violet),
+`reviewing` (blue), `blocked` (signal red), `meeting` (amber), `break` (mint),
+`off` (quiet violet-grey) — matched in lightness and chroma so the board reads
+as one system. A state contributes exactly one colour, `--state`; the tint, the
+left edge, the dot and the glow are all mixed from it. Mapped in
+`lib/status-state.ts`.
 
 ### Type
 
-- **Instrument Sans** — UI, labels, buttons
-- **IBM Plex Mono** — timestamps, ticket refs, dimension labels; `.annotation`
-  sets it uppercase with generous letter-spacing
-- **Architects Daughter** — the `.hand` class, status text on sticky notes only.
-  Never for UI.
+- **Bricolage Grotesque** — headings, and the status text people write. It has
+  real quirks in the counters, so a card looks drawn rather than set.
+- **Instrument Sans** — UI, labels, buttons. Character here would be noise.
+- **IBM Plex Mono** — anything that is data: timestamps, ticket refs, join
+  codes. `.annotation` sets it uppercase with generous letter-spacing.
 
 ### Signature element: staleness decay
 
-A status note visibly ages, because a board that hides stale data is lying.
+A status card visibly ages, because a board that hides stale data is lying.
 Thresholds live in `lib/staleness.ts` — one source for the CSS tier, the mono
 age label, and the tests.
 
-| Age | Treatment |
-|---|---|
-| < 1h | full saturation, crisp 2px shadow, note sits flat |
-| 1–3h | shadow softens, paper desaturates ~15% |
-| 3–6h | desaturates ~35%, bottom-right corner curls, note tilts 1–2° |
-| > 6h | near-greyscale, pronounced curl, mono annotation reads `STALE · 7H` |
+| Age | `--tint` | Treatment |
+|---|---|---|
+| < 1h | 1.0 | full tint, coloured glow, sits flat |
+| 1–3h | 0.72 | glow starts to go |
+| 3–6h | 0.42 | colour mostly gone, corner curls, tilts 1° |
+| > 6h | 0.14 | neutral and dim, pronounced curl, reads `STALE · 7H` |
 
-Blocked notes are exempt from decay — signal-red pushpin and a slow pulse until
-resolved. A blocker should never fade into the background.
+Blocked cards are exempt from decay — they hold full chroma, invert to white
+ink, and breathe on a slow loop until resolved. A blocker should never fade
+into the background.
 
 ### Restraint
 
-Decay is where the boldness goes. Everything else stays quiet: no gradients, no
-glassmorphism, no drop shadows on UI chrome, `border-radius` at most 2px except
-on the notes. Respect `prefers-reduced-motion` — replace motion with the static
-mono age label. Keyboard focus always visible.
+Decay is where the boldness goes. The brand gradient appears in exactly three
+places — the wordmark, the primary button, and the active nav underline. One
+entrance animation (`.rise-in`), one hover (a 3px lift on cards), one loop (the
+blocked breathe). No glassmorphism beyond the top bar's blur. Respect
+`prefers-reduced-motion` — the mono age label is always in the DOM, so
+staleness stays legible with every animation removed. Keyboard focus is always
+visible and uses the brand colour.
+
+Controls live as classes in `globals.css` (`.btn`, `.input`, `.chip`,
+`.error-note`, `.panel`), not as long arbitrary-value strings, so a button's
+look is one edit and every screen moves together. `components/ui/` wraps them:
+`Button` takes a named `variant` union rather than boolean flags, and `Field`
+takes its input as children.
 
 ## Copy voice
 

@@ -1,3 +1,4 @@
+import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getBoardData, getViewer } from "@/lib/queries";
 
 /**
@@ -15,17 +16,12 @@ export default async function OfficePage() {
 
   return (
     <>
-      <div className="mb-8 flex items-baseline justify-between">
-        <h1 className="text-2xl tracking-tight">Office</h1>
-        <span className="annotation">Floor plan</span>
-      </div>
+      <PageHeader title="Office" meta="Floor plan" />
 
-      <div className="dimension-rule pt-8 text-center">
-        <p className="text-lg">The floor plan isn&rsquo;t drawn yet.</p>
-        <p className="annotation mt-2">
-          {members.length} desks to place · Ask the head to arrange them
-        </p>
-      </div>
+      <EmptyState
+        title="The floor plan isn't drawn yet"
+        hint={`${members.length} desk${members.length === 1 ? "" : "s"} to place. The head arranges them once, and everyone sees the same room.`}
+      />
     </>
   );
 }

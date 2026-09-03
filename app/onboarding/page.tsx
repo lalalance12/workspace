@@ -19,10 +19,14 @@ export default async function OnboardingPage() {
   if (!viewer) {
     return (
       <Shell>
-        <p className="text-lg">You&rsquo;re signed in, but you have no profile.</p>
-        <p className="annotation mt-2">
-          A profile is created on signup by a database trigger. Ask an admin.
-        </p>
+        <div className="panel mx-auto max-w-sm p-8 text-center">
+          <p className="text-lg font-medium">
+            You&rsquo;re signed in, but you have no profile.
+          </p>
+          <p className="annotation mt-3">
+            A profile is created on signup by a database trigger. Ask an admin.
+          </p>
+        </div>
       </Shell>
     );
   }
@@ -30,33 +34,37 @@ export default async function OnboardingPage() {
   if (viewer.profile.team_id) redirect("/board");
 
   return (
-    <Shell wide>
-      <p className="annotation">Workspace</p>
-      <h1 className="mt-2 mb-1 text-2xl tracking-tight">
-        One more step, {viewer.profile.display_name}.
-      </h1>
-      <p className="mb-10 text-sm text-[var(--ink-soft)]">
-        Workspace is a board a team shares. Join the one you were invited to, or
-        start your own.
-      </p>
+    <Shell>
+      <div className="rise-in mx-auto w-full max-w-3xl">
+        <div className="mb-10 flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="size-5 rounded-md"
+            style={{ backgroundImage: "var(--gradient-brand)" }}
+          />
+          <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
+            Workspace
+          </span>
+        </div>
 
-      <OnboardingChoice />
+        <h1 className="text-3xl">
+          One more step, {viewer.profile.display_name}.
+        </h1>
+        <p className="mt-3 mb-10 max-w-lg text-[var(--ink-soft)]">
+          A board belongs to a team. Join the one you were invited to, or start
+          your own and hand out the code.
+        </p>
+
+        <OnboardingChoice />
+      </div>
     </Shell>
   );
 }
 
-function Shell({
-  children,
-  wide = false,
-}: {
-  children: React.ReactNode;
-  wide?: boolean;
-}) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="drafting-grid grid min-h-dvh place-items-center px-6 py-12">
-      <div className={wide ? "w-full max-w-2xl" : "max-w-sm text-center"}>
-        {children}
-      </div>
+    <div className="canvas-ambient grid min-h-dvh place-items-center px-6 py-16">
+      {children}
     </div>
   );
 }

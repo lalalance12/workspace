@@ -15,7 +15,7 @@ export default async function AppLayout({
   // here — so redirecting on a missing profile row would just ping-pong.
   if (!viewer) {
     return (
-      <div className="drafting-grid grid min-h-dvh place-items-center px-6">
+      <div className="canvas-ambient grid min-h-dvh place-items-center px-6">
         <div className="max-w-sm text-center">
           <p className="text-lg">You&rsquo;re signed in, but you have no profile.</p>
           <p className="annotation mt-2">
@@ -33,7 +33,7 @@ export default async function AppLayout({
   if (!viewer.profile.team_id) redirect("/onboarding");
 
   return (
-    <div className="drafting-grid min-h-dvh">
+    <div className="canvas-ambient min-h-dvh">
       <TopBar
         profileId={viewer.profile.id}
         displayName={viewer.profile.display_name}

@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { StatusNote } from "@/components/status-note";
+import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,20 +32,29 @@ export default async function TimelinePage() {
 
   return (
     <>
-      <div className="mb-8 flex items-baseline justify-between">
-        <h1 className="text-2xl tracking-tight">Timeline</h1>
-        <span className="annotation">Today</span>
-      </div>
+      <PageHeader
+        title="Timeline"
+        meta={`Today · ${rows?.length ?? 0} update${rows?.length === 1 ? "" : "s"}`}
+      />
 
       {!rows || rows.length === 0 ? (
-        <div className="dimension-rule pt-8 text-center">
-          <p className="text-lg">Nothing posted today yet.</p>
-          <p className="annotation mt-2">Post the first update</p>
-        </div>
+        <EmptyState
+          title="Nothing posted today yet"
+          hint="Every status the team posts today lands here, newest first."
+          action={
+            <Link href="/me" className="btn btn-primary">
+              Post the first update
+            </Link>
+          }
+        />
       ) : (
-        <ol className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6">
-          {rows.map((row) => (
-            <li key={row.id}>
+        <ol className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6">
+          {rows.map((row, i) => (
+            <li
+              key={row.id}
+              className="rise-in"
+              style={{ animationDelay: `${Math.min(i * 35, 280)}ms` }}
+            >
               <StatusNote
                 status={row}
                 name={nameFor.get(row.profile_id) ?? "Someone"}

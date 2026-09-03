@@ -11,7 +11,6 @@ import { clearMailbox, magicLinkFor } from "./mail";
  */
 
 const EMAIL = "dana@example.com";
-const SIGNAL = "rgb(192, 71, 60)"; // --signal, the only alarming colour
 
 test("log in, post a status, see it on the board", async ({ page }) => {
   await clearMailbox();
@@ -42,8 +41,16 @@ test("log in, post a status, see it on the board", async ({ page }) => {
   await expect(card).toBeVisible();
   await expect(card).toHaveAttribute("data-state", "blocked");
 
-  // Blocked renders in --signal and is exempt from staleness decay.
-  await expect(card).toHaveCSS("background-color", SIGNAL);
+  // Blocked is painted in the blocked state colour and is exempt from decay.
+  // The expected value is read back from the token rather than hardcoded, so a
+  // palette change moves the test with the design instead of breaking it.
+  const blocked = await page.evaluate(() =>
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--color-state-blocked")
+      .trim(),
+  );
+  expect(blocked).not.toBe("");
+  await expect(card).toHaveCSS("background-color", blocked);
   await expect(card).toHaveAttribute("data-blocked", "true");
   await expect(card).toHaveAttribute("data-decay", "fresh");
 });

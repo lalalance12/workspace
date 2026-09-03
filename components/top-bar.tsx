@@ -1,8 +1,9 @@
 import Link from "next/link";
 
+import { NavLinks, type NavItem } from "@/components/nav-links";
 import { NotificationBell } from "@/components/notification-bell";
 
-const NAV = [
+const NAV: NavItem[] = [
   { href: "/board", label: "Board" },
   { href: "/office", label: "Office" },
   { href: "/me", label: "Me" },
@@ -18,30 +19,46 @@ export function TopBar({
   displayName: string;
   isHead: boolean;
 }) {
+  const items = isHead
+    ? [...NAV, { href: "/settings/team", label: "Team" }]
+    : NAV;
+
   return (
-    <header className="border-b border-[var(--ink)]/20 bg-[var(--paper)]">
+    <header
+      className="sticky top-0 z-40 border-b backdrop-blur-md"
+      style={{
+        borderColor: "var(--line)",
+        backgroundColor: "color-mix(in oklab, var(--surface) 82%, transparent)",
+      }}
+    >
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-        <Link href="/board" className="annotation !text-[var(--ink)]">
-          Workspace
+        <Link href="/board" className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="size-5 rounded-md"
+            style={{ backgroundImage: "var(--gradient-brand)" }}
+          />
+          <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
+            Workspace
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-4">
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className="text-sm">
-              {item.label}
-            </Link>
-          ))}
-          {isHead && (
-            <Link href="/settings/team" className="text-sm">
-              Team
-            </Link>
-          )}
-        </nav>
+        <NavLinks items={items} />
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-2">
           <NotificationBell profileId={profileId} />
-          <Link href="/settings/me" className="annotation">
-            {displayName}
+          <Link
+            href="/settings/me"
+            className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm transition-colors duration-200 hover:bg-[var(--sunken)]"
+          >
+            <span
+              aria-hidden="true"
+              className="grid size-7 place-items-center rounded-full text-xs font-semibold text-white"
+              style={{ backgroundImage: "var(--gradient-brand)" }}
+            >
+              {displayName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="hidden sm:inline">{displayName}</span>
           </Link>
         </div>
       </div>

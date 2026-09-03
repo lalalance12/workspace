@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 
 import { StatusNote, type NoteStatus } from "@/components/status-note";
+import { EmptyState } from "@/components/ui/page";
 import { createClient } from "@/lib/supabase/client";
 
 export interface BoardMember {
@@ -105,6 +107,7 @@ export function BoardView({
     };
   }, [teamId, viewerId]);
 
+
   const pinned = members
     .map((m) => ({ member: m, status: statuses[m.id] }))
     .filter((row): row is { member: BoardMember; status: NoteStatus } =>
@@ -113,38 +116,65 @@ export function BoardView({
 
   if (pinned.length === 0) {
     return (
-      <div className="dimension-rule mt-10 pt-8 text-center">
-        <p className="text-lg">Nothing pinned yet.</p>
-        <p className="annotation mt-2">Post the first update</p>
-      </div>
+      <EmptyState
+        title="Nothing pinned yet"
+        hint="The board fills up as people post. Yours is the first."
+        action={
+          <Link href="/me" className="btn btn-primary">
+            Post the first update
+          </Link>
+        }
+      />
     );
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6">
       <AnimatePresence initial={false}>
-        {pinned.map(({ member, status }) => (
+        {pinned.map(({ member, status }, i) => (
           <motion.div
             key={member.id}
             layout
-            initial={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{
+              duration: 0.26,
+              ease: [0.2, 0.8, 0.2, 1],
+              // A short stagger on first paint only. Long enough to read as a
+              // board assembling itself, short enough that nobody waits.
+              delay: Math.min(i * 0.035, 0.28),
+            }}
             className="relative"
           >
             {online.has(member.id) && (
               <span
-                className="absolute -top-1.5 -right-1.5 z-10 size-2.5 rounded-full bg-[var(--blueprint)]"
+                className="absolute -top-1 -right-1 z-10 size-3 rounded-full ring-2"
+                style={{
+                  backgroundImage: "var(--gradient-brand)",
+                  // The ring cuts the dot out of the card rather than sitting
+                  // on top of it, so presence reads as separate from status.
+                  ["--tw-ring-color" as string]: "var(--canvas)",
+                }}
                 title={`${member.display_name} is here`}
                 aria-label={`${member.display_name} is here`}
               />
             )}
-            <StatusNote
-              status={status}
-              name={nameFor.get(member.id) ?? "Someone"}
-              now={now}
-            />
+
+            {/* Keyed on the status row, so a new one arriving over Realtime
+                gets its own entrance instead of silently swapping text. */}
+            <motion.div
+              key={status.id}
+              initial={{ opacity: 0.4, scale: 0.985 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+              <StatusNote
+                status={status}
+                name={nameFor.get(member.id) ?? "Someone"}
+                now={now}
+              />
+            </motion.div>
           </motion.div>
         ))}
       </AnimatePresence>

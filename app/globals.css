@@ -1,169 +1,414 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Workspace — architectural drafting.
+   Workspace — lit and unlit.
 
-   The office view genuinely is a floor plan, so the whole interface is built
-   like a working drawing: drafting paper, thin structural rules, dimension
-   lines, annotations in mono caps. Warm paper notes pinned onto a cool
-   technical ground. Deliberately not a generic SaaS dashboard.
+   The product is about attention over time: a status is worth something when
+   it is fresh and worth less every hour it sits there. So light is the whole
+   design language. A fresh card is lit — saturated tint, a coloured glow
+   underneath, full chroma. As it ages the light drains out of it until the
+   card is neutral, dim and curling at the corner.
+
+   The gradient is therefore not decoration. --tint is set by the decay tier
+   and every colour on the card is mixed against it, which means the palette
+   itself is the staleness signal.
+
+   Ground is an off-white with a violet cast, never pure white — a screen
+   people keep open all day should feel like paper under a warm lamp, not a
+   spreadsheet.
 --------------------------------------------------------------------------- */
 
 @theme {
-  --color-paper: #e9e7de; /* drafting paper ground */
-  --color-paper-deep: #d8d5c8; /* board surface, insets */
-  --color-ink: #1c222b; /* primary text, structural lines */
-  --color-ink-soft: #5c6470; /* secondary text, annotations */
-  --color-blueprint: #3f6e85; /* structural accent, room outlines */
-  --color-signal: #c0473c; /* blocked — the only alarming colour */
+  /* --- Ground ------------------------------------------------------------ */
+  --color-canvas: oklch(97.8% 0.009 300); /* off-white, violet cast */
+  --color-surface: oklch(99.4% 0.004 300); /* cards, popovers */
+  --color-sunken: oklch(95.4% 0.014 300); /* insets, hovers */
 
-  --color-note-plain: #efe3b8;
-  --color-note-cyan: #c5dce2;
-  --color-note-rose: #ebcbc6;
-  --color-note-mint: #cbdcc7;
+  /* --- Ink --------------------------------------------------------------- */
+  --color-ink: oklch(26% 0.055 295); /* deep violet-black */
+  --color-ink-soft: oklch(52% 0.035 295); /* secondary text */
+  --color-ink-faint: oklch(68% 0.025 295); /* annotations */
 
+  /* --- Brand ------------------------------------------------------------- */
+  --color-violet: oklch(55% 0.235 295); /* primary */
+  --color-violet-deep: oklch(44% 0.22 288); /* gradient end */
+  --color-violet-lift: oklch(70% 0.17 300); /* gradient start */
+
+  /* --- State hues -------------------------------------------------------- */
+  /* Matched lightness and chroma so the board reads as one system. */
+  --color-state-working: oklch(55% 0.235 295); /* violet */
+  --color-state-reviewing: oklch(62% 0.16 235); /* blue */
+  --color-state-blocked: oklch(60% 0.215 22); /* signal */
+  --color-state-meeting: oklch(72% 0.16 65); /* amber */
+  --color-state-break: oklch(66% 0.15 165); /* mint */
+  --color-state-off: oklch(62% 0.03 295); /* quiet violet-grey */
+
+  /* --- Type -------------------------------------------------------------- */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
-  /* Status text on sticky notes only. Never for UI. */
-  --font-hand: var(--font-architects-daughter), "Comic Sans MS", cursive;
 
-  /* Restraint: border-radius at most 2px, except on the notes themselves. */
-  --radius-sheet: 2px;
-  --radius-note: 3px;
+  /* --- Geometry ---------------------------------------------------------- */
+  /* The drafting-paper era capped radius at 2px. This one is soft: cards are
+     objects you could pick up, not cells in a table. */
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
 }
 
-/* Spec token names, so the design language in the brief exists literally in
-   the codebase and not only as Tailwind's --color-* rewrite. */
+/* Spec names, so the palette exists literally and not only as Tailwind's
+   --color-* rewrite. Both spellings work. */
 :root {
-  --paper: var(--color-paper);
-  --paper-deep: var(--color-paper-deep);
+  --canvas: var(--color-canvas);
+  --surface: var(--color-surface);
+  --sunken: var(--color-sunken);
   --ink: var(--color-ink);
   --ink-soft: var(--color-ink-soft);
-  --blueprint: var(--color-blueprint);
-  --signal: var(--color-signal);
-  --note-plain: var(--color-note-plain);
-  --note-cyan: var(--color-note-cyan);
-  --note-rose: var(--color-note-rose);
-  --note-mint: var(--color-note-mint);
+  --ink-faint: var(--color-ink-faint);
+  --violet: var(--color-violet);
+  --violet-deep: var(--color-violet-deep);
+  --violet-lift: var(--color-violet-lift);
+  --signal: var(--color-state-blocked);
+
+  /* The one brand gradient. Violet climbing to blue rather than the usual
+     violet-to-pink, so it sits in the same family as the reviewing state and
+     the whole interface stays one temperature. */
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--color-violet-lift) 0%,
+    var(--color-violet) 45%,
+    var(--color-violet-deep) 100%
+  );
+
+  /* Hairlines: violet-tinted, never neutral grey. */
+  --line: color-mix(in oklab, var(--ink) 12%, transparent);
+  --line-strong: color-mix(in oklab, var(--ink) 22%, transparent);
 }
 
 html,
 body {
-  background: var(--paper);
+  background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-sans);
 }
 
-/* Keyboard focus is always visible. Non-negotiable. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Keyboard focus is always visible. Non-negotiable, and it uses the brand
+   colour so it reads as part of the design rather than a browser artefact. */
 :focus-visible {
-  outline: 2px solid var(--blueprint);
+  outline: 2px solid var(--violet);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--violet) 24%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
-   Annotation type — mono, uppercase, generously tracked.
-   Timestamps, ticket refs, dimension labels.
+   Ambient ground.
+
+   Two very wide, very faint radial washes. They give the off-white somewhere
+   to go without becoming a "gradient background" — at this opacity you read it
+   as light in the room, not as a colour.
+--------------------------------------------------------------------------- */
+.canvas-ambient {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(
+      62rem 30rem at 8% -14%,
+      color-mix(in oklab, var(--violet) 8%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      44rem 24rem at 98% -6%,
+      color-mix(in oklab, var(--color-state-reviewing) 6%, transparent) 0%,
+      transparent 55%
+    );
+  background-attachment: fixed;
+}
+
+/* ---------------------------------------------------------------------------
+   Utility type — mono, uppercase, tracked. Timestamps, ticket refs, labels.
 --------------------------------------------------------------------------- */
 .annotation {
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   font-size: 0.6875rem;
-  color: var(--ink-soft);
+  color: var(--ink-faint);
 }
 
-/* The handwritten status line. Notes only. */
-.hand {
-  font-family: var(--font-hand);
-  line-height: 1.3;
+/* Status text on a card. Display face, tight, one size up from the UI — the
+   sentence someone actually wrote is the largest thing on the card. */
+.note-text {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+/* A word set in the brand gradient. Used once per page at most. */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ---------------------------------------------------------------------------
-   Drafting ground — a faint grid, drawn not decorative.
+   Surfaces
 --------------------------------------------------------------------------- */
-.drafting-grid {
-  background-color: var(--paper);
-  background-image:
-    linear-gradient(to right, rgb(28 34 43 / 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(28 34 43 / 0.045) 1px, transparent 1px);
-  background-size: 24px 24px;
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent),
+    0 8px 24px -16px color-mix(in oklab, var(--ink) 30%, transparent);
 }
 
-/* A dimension line, as on a working drawing. */
-.dimension-rule {
-  border-top: 1px solid rgb(28 34 43 / 0.25);
-  position: relative;
-}
-.dimension-rule::before,
-.dimension-rule::after {
-  content: "";
-  position: absolute;
-  top: -4px;
-  width: 1px;
-  height: 9px;
-  background: rgb(28 34 43 / 0.35);
-}
-.dimension-rule::before {
-  left: 0;
-}
-.dimension-rule::after {
-  right: 0;
+/* A one-pixel rule that carries the brand instead of being grey. */
+.rule-brand {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--violet) 55%, transparent),
+    transparent 72%
+  );
 }
 
 /* ---------------------------------------------------------------------------
-   SIGNATURE ELEMENT — staleness decay.
+   Controls.
 
-   A status note visibly ages, because a board that hides stale data is lying.
-   This is where all the boldness in the design goes; everything else stays
-   quiet.
+   Kept here rather than as long arbitrary-value class strings, so a button's
+   look is one edit in one file and every screen moves together.
+--------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.625rem 1rem;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    opacity 200ms ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
 
-   Tiers are set by data-decay, computed in lib/staleness.ts so the same
-   thresholds drive the markup, the mono age label, and the tests.
+/* The brand gradient appears on the primary action and in the wordmark.
+   Nowhere else — spend the boldness in one place. */
+.btn-primary {
+  background-image: var(--gradient-brand);
+  color: white;
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
+    0 10px 22px -12px var(--violet);
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
+    0 16px 30px -14px var(--violet);
+}
+
+.btn-quiet {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+.btn-quiet:hover:not(:disabled) {
+  background: var(--sunken);
+  border-color: color-mix(in oklab, var(--violet) 40%, var(--line-strong));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 0.5rem 0.75rem;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.input {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: 0.625rem 0.875rem;
+  outline: none;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.input::placeholder {
+  color: var(--ink-faint);
+}
+.input:hover {
+  border-color: color-mix(in oklab, var(--violet) 35%, var(--line-strong));
+}
+.input:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--violet) 18%, transparent);
+}
+
+/* Failure, stated. The RPC layer already produces a sentence that says what
+   happened and what to do; this only makes it impossible to miss. */
+.error-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--signal) 9%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--signal) 35%, transparent);
+  border-radius: var(--radius-control);
+  padding: 0.625rem 0.875rem;
+}
+
+/* A state chip on /me. Unselected it is an outline; selected it fills with its
+   own state colour, so choosing one previews the card you are about to post. */
+.chip {
+  --state: var(--color-state-working);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  padding: 0.5rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease,
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.chip:hover {
+  border-color: color-mix(in oklab, var(--state) 55%, var(--line-strong));
+  color: var(--ink);
+}
+.chip[aria-pressed="true"] {
+  background: var(--state);
+  border-color: var(--state);
+  color: var(--chip-ink, white);
+  box-shadow: 0 8px 20px -12px var(--state);
+  transform: translateY(-1px);
+}
+.chip[aria-pressed="true"] .state-dot {
+  background: var(--chip-ink, white);
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------------------
+   SIGNATURE ELEMENT — staleness decay, expressed as light.
+
+   --tint runs 1 -> 0 across the four tiers set by lib/staleness.ts. Every
+   colour on the card is mixed against it, so a stale card is not a filtered
+   fresh card: it is genuinely a different, quieter colour.
+
+   Tiers stay on data-decay so the markup, the mono age label and the tests all
+   read from one source.
 --------------------------------------------------------------------------- */
 .note {
+  --tint: 1;
   --curl: 0px;
+  --state: var(--color-state-working);
+
   position: relative;
-  border-radius: var(--radius-note);
-  background-color: var(--note-bg, var(--note-plain));
-  color: var(--ink);
+  border-radius: var(--radius-card);
+  border: 1px solid
+    color-mix(in oklab, var(--state) calc(var(--tint) * 34%), var(--line));
+  background-color: var(--surface);
+  background-image: linear-gradient(
+    152deg,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 26%), var(--surface)) 0%,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 10%), var(--surface)) 58%,
+    var(--surface) 100%
+  );
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
+    0 14px 28px -20px
+      color-mix(in oklab, var(--state) calc(var(--tint) * 65%), transparent);
   transition:
-    filter 400ms ease,
-    box-shadow 400ms ease,
-    rotate 400ms ease;
+    box-shadow 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 420ms ease,
+    background-image 420ms ease,
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    rotate 420ms ease;
 }
 
-/* < 1h — full saturation, crisp 2px shadow, sits flat. */
+/* The accent edge. Full chroma at the top, draining downward — the clearest
+   read of "how lit is this card" at board scale. */
+.note::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 100%), transparent),
+    color-mix(in oklab, var(--state) calc(var(--tint) * 25%), transparent)
+  );
+}
+
+/* < 1h — lit. */
 .note[data-decay="fresh"] {
-  filter: none;
-  box-shadow: 2px 2px 0 rgb(28 34 43 / 0.28);
+  --tint: 1;
   rotate: 0deg;
 }
 
-/* 1–3h — shadow softens, paper desaturates ~15%. */
+/* 1–3h — the glow starts to go. */
 .note[data-decay="soft"] {
-  filter: saturate(0.85);
-  box-shadow: 2px 2px 5px rgb(28 34 43 / 0.16);
+  --tint: 0.72;
   rotate: 0deg;
 }
 
-/* 3–6h — desaturates ~35%, bottom-right corner curls, note tilts 1–2°. */
+/* 3–6h — colour mostly gone, corner curls, card tilts. */
 .note[data-decay="curl"] {
-  --curl: 14px;
-  filter: saturate(0.65);
-  box-shadow: 1px 2px 7px rgb(28 34 43 / 0.13);
-  rotate: -1.2deg;
+  --tint: 0.42;
+  --curl: 16px;
+  rotate: -1.1deg;
 }
 
-/* > 6h — near-greyscale, pronounced curl. */
+/* > 6h — unlit. Neutral, dim, pronounced curl. */
 .note[data-decay="stale"] {
-  --curl: 22px;
-  filter: saturate(0.12);
-  box-shadow: 1px 2px 9px rgb(28 34 43 / 0.11);
+  --tint: 0.14;
+  --curl: 24px;
   rotate: -2deg;
 }
 
-/* The curl itself: a flat two-tone fold, not a gradient. The corner is cut
-   from the note and the flap is drawn back over it. */
+/* The curl: the corner is cut out of the card and the flap drawn back over
+   it. Flat two-tone, so it reads as paper rather than as a shadow effect. */
 .note[data-decay="curl"],
 .note[data-decay="stale"] {
   clip-path: polygon(
@@ -183,48 +428,106 @@ body {
   bottom: 0;
   width: var(--curl);
   height: var(--curl);
-  background: var(--paper-deep);
+  background: var(--sunken);
   clip-path: polygon(100% 0, 0 100%, 100% 100%);
-  box-shadow: -1px -1px 2px rgb(28 34 43 / 0.18);
+  box-shadow: -1px -1px 3px color-mix(in oklab, var(--ink) 18%, transparent);
 }
 
-/* Blocked notes are exempt from decay. A blocker should never fade into the
-   background: signal pushpin, full saturation, slow pulse until resolved. */
+/* Hover: the card lifts toward the light. Cheap, physical, and it never moves
+   layout — transform only. */
+.note:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
+    0 22px 40px -22px
+      color-mix(in oklab, var(--state) calc(var(--tint) * 85%), transparent);
+}
+
+/* Blocked is exempt from decay and from restraint. It holds full chroma,
+   inverts to white ink, and breathes until someone resolves it. A blocker must
+   never fade into the background. */
 .note[data-blocked="true"] {
-  filter: none !important;
+  --tint: 1;
+  --curl: 0px;
   rotate: 0deg !important;
   clip-path: none !important;
-  --curl: 0px;
-  box-shadow: 2px 2px 0 rgb(192 71 60 / 0.45);
-  animation: note-pulse 3.2s ease-in-out infinite;
+  background-color: var(--color-state-blocked);
+  background-image: linear-gradient(
+    152deg,
+    color-mix(in oklab, white 16%, var(--color-state-blocked)) 0%,
+    var(--color-state-blocked) 55%,
+    color-mix(in oklab, black 10%, var(--color-state-blocked)) 100%
+  );
+  border-color: color-mix(in oklab, white 26%, var(--color-state-blocked));
+  color: white;
+  animation: note-breathe 3.4s ease-in-out infinite;
 }
 .note[data-blocked="true"]::after {
   display: none;
 }
+.note[data-blocked="true"]::before {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 85%, transparent),
+    color-mix(in oklab, white 25%, transparent)
+  );
+}
 
-@keyframes note-pulse {
+@keyframes note-breathe {
   0%,
   100% {
-    box-shadow: 2px 2px 0 rgb(192 71 60 / 0.45);
+    box-shadow:
+      0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
+      0 14px 30px -18px
+        color-mix(in oklab, var(--color-state-blocked) 55%, transparent);
   }
   50% {
-    box-shadow: 2px 2px 0 rgb(192 71 60 / 0.9);
+    box-shadow:
+      0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
+      0 18px 38px -16px
+        color-mix(in oklab, var(--color-state-blocked) 95%, transparent);
   }
 }
 
-.pushpin {
-  width: 10px;
-  height: 10px;
+/* The state marker on a card. Mixes with --tint like everything else, so it
+   dims as the card ages. */
+.state-dot {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--ink-soft);
+  flex: none;
+  background: color-mix(
+    in oklab,
+    var(--state) calc(var(--tint) * 100%),
+    var(--ink-faint)
+  );
 }
-.note[data-blocked="true"] .pushpin {
-  background: var(--signal);
+.note[data-blocked="true"] .state-dot {
+  background: white;
 }
 
 /* ---------------------------------------------------------------------------
-   Respect prefers-reduced-motion: replace motion with the static mono age
-   label, which is always in the DOM anyway.
+   Entry motion. One rule, used by anything that appears: a short rise with a
+   fade. Deliberately the only entrance in the system.
+--------------------------------------------------------------------------- */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion: no rise, no breathing, no tilt. The mono age label is always
+   in the DOM, so staleness stays legible with every animation removed.
 --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -234,7 +537,9 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .note {
+  .note,
+  .note:hover {
     rotate: 0deg !important;
+    transform: none !important;
   }
 }

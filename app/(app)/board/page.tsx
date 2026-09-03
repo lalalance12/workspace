@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { BoardView } from "./board-view";
+import { PageHeader } from "@/components/ui/page";
 import { getBoardData, getViewer } from "@/lib/queries";
 
 /**
@@ -19,10 +20,10 @@ export default async function BoardPage() {
 
   return (
     <>
-      <div className="mb-8 flex items-baseline justify-between">
-        <h1 className="text-2xl tracking-tight">Board</h1>
-        <span className="annotation">{members.length} on the team</span>
-      </div>
+      <PageHeader
+        title="Board"
+        meta={`${members.length} on the team · ${statuses.length} posted`}
+      />
 
       <BoardView
         teamId={viewer.profile.team_id}

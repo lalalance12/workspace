@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { ErrorNote, Field, Input } from "@/components/ui/field";
 import { createClient } from "@/lib/supabase/client";
 import { authCallbackURL } from "@/lib/site-url";
 
@@ -48,26 +50,33 @@ export function LoginForm() {
 
   if (sent) {
     return (
-      <div className="dimension-rule pt-6">
-        <p className="text-sm">Check {email} for a sign-in link.</p>
-        <p className="annotation mt-2">It expires in an hour</p>
-        <button
+      <div className="panel rise-in p-6">
+        <span
+          aria-hidden="true"
+          className="mb-4 block h-1 w-10 rounded-full"
+          style={{ backgroundImage: "var(--gradient-brand)" }}
+        />
+        <p className="text-lg font-medium">Check your inbox</p>
+        <p className="mt-2 text-sm text-[var(--ink-soft)]">
+          A sign-in link is on its way to {email}. It expires in an hour.
+        </p>
+        <Button
+          variant="ghost"
           type="button"
           onClick={() => setSent(false)}
-          className="annotation mt-4 cursor-pointer underline"
+          className="mt-4 -ml-3"
         >
           Use a different address
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <form onSubmit={sendMagicLink} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-2">
-          <span className="annotation">Email</span>
-          <input
+      <form onSubmit={sendMagicLink} className="flex flex-col gap-4">
+        <Field label="Email">
+          <Input
             type="email"
             required
             autoFocus
@@ -75,29 +84,18 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"
-            className="border border-[var(--ink)]/25 bg-transparent px-3 py-2"
-            style={{ borderRadius: "var(--radius-sheet)" }}
           />
-        </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="cursor-pointer bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--paper)] disabled:opacity-60"
-          style={{ borderRadius: "var(--radius-sheet)" }}
-        >
+        </Field>
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Sending…" : "Send sign-in link"}
-        </button>
+        </Button>
       </form>
 
       <p className="text-sm text-[var(--ink-soft)]">
         No password. We email you a link that signs you in.
       </p>
 
-      {error && (
-        <p role="alert" className="border-l-2 border-[var(--signal)] py-2 pl-3 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <ErrorNote>{error}</ErrorNote>}
     </div>
   );
 }

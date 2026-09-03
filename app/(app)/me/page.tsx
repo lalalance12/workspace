@@ -1,4 +1,5 @@
 import { MeForm } from "./me-form";
+import { PageHeader } from "@/components/ui/page";
 import { getMyStatus, getQuickPicks, getViewer } from "@/lib/queries";
 
 export default async function MePage() {
@@ -12,7 +13,10 @@ export default async function MePage() {
 
   return (
     <>
-      <h1 className="mb-8 text-2xl tracking-tight">What are you on?</h1>
+      <PageHeader
+        title="What are you on?"
+        meta={current ? "Posted" : "Nothing posted yet"}
+      />
       <MeForm
         profileId={viewer.profile.id}
         displayName={viewer.profile.display_name}
