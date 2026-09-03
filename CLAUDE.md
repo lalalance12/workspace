@@ -220,9 +220,12 @@ pinned yet. Post the first update."
 ## Testing
 
 - Vitest for RPC wrappers and the staleness/decay calculation.
-- One Playwright flow: log in → post status → assert the note appears on
-  `/board` with the right state color. Signs in by magic link read out of
-  Mailpit, so it exercises the real auth path.
+- Two Playwright flows, both signing in with a password: seeded user → post
+  status → assert the note appears on `/board` with the right state colour, and
+  create account → `/onboarding` → start a team → land on an empty board. They
+  used to read a magic link out of Mailpit; that went away with the magic link
+  itself, because a sender that rations messages by the hour is a bad thing to
+  hang a test suite on.
 - The scheduler is tested in SQL with pgTAP (`supabase/tests/scheduler.test.sql`):
   seed a member with a 2-hour-old status, run `select enqueue_due_nudges()`,
   assert exactly one row lands in `nudges`. Then run it again and assert zero —

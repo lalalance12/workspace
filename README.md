@@ -103,35 +103,29 @@ extension isn't available, rather than failing the whole migration.
 
 ### Sign-in in production
 
-Two ways in, no OAuth providers: an emailed **magic link**, or **email and
-password**. They are two credentials on one identity, not two kinds of user —
-someone who started with a link sets a password from `/settings/me`, and the
-link keeps working afterwards. There is no password reset flow on purpose: the
-email link already is one.
+Email and password. No magic link, no OAuth providers.
 
-The link half is the fragile half. Three things have to agree, or it fails
-*after* someone clicks rather than before:
+The magic link was removed deliberately. Supabase's built-in sender allows a
+couple of emails **per hour across the whole project**, which is fine for one
+developer and useless the moment three colleagues try to sign in at once. Every
+credential path here therefore touches no email infrastructure at all.
 
-1. **`NEXT_PUBLIC_SITE_URL`** on the host (Vercel → Settings → Environment
-   Variables) set to the production domain. `lib/site-url.ts` builds
-   `emailRedirectTo` from it. Give it type **Config**, not Secret — anything
-   named `NEXT_PUBLIC_*` is inlined into the browser bundle by design, and
-   Vercel refuses to mark a public-prefixed variable write-only.
-2. **Supabase → Authentication → URL Configuration**
-   - *Site URL*: `https://your-app.vercel.app`
-   - *Redirect URLs*: `https://your-app.vercel.app/**`, plus
-     `https://*-<your-team>.vercel.app/**` if preview deploys should sign in too.
+Two settings make that true, and both are on the Supabase project rather than in
+this repo:
 
-   An origin missing from this allowlist is silently dropped and the person is
-   returned to the Site URL instead, which looks exactly like a broken link.
-3. **Authentication → Emails → Magic Link.** Leave the body on
-   `{{ .ConfirmationURL }}`. It already carries the redirect through the auth
-   server's verify endpoint and back to `/auth/callback` with the `?code=` that
-   `exchangeCodeForSession()` expects. Hardcoding a host there breaks every
-   environment but one.
+1. **Authentication -> Sign In / Providers -> Email -> Confirm email: OFF.**
+   With it on, `signUp` returns no session and the account is inert until a link
+   is opened — which puts the rate-limited mail server back in the critical
+   path. `/signup` detects this and names the setting rather than pretending to
+   have worked.
+2. **`NEXT_PUBLIC_SITE_URL`** on the host, plus Site URL and Redirect URLs under
+   Authentication -> URL Configuration. Only needed if confirmations are ever
+   switched back on, but wrong values are invisible until then, so set them now.
 
-The login screen says the link expires in an hour, which matches the default
-*Email OTP expiry*. Change one and change the other.
+The consequence to accept: **there is no self-serve password recovery.** Until
+custom SMTP is configured, a forgotten password is reset from the Supabase
+dashboard by whoever owns the project. For a small team that is a fair trade for
+sign-in that cannot be rate limited.
 
 **Before a real team uses this, configure custom SMTP.** Supabase's built-in
 email sender only delivers to your own project members and is rate-limited to a
