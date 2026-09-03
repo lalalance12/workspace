@@ -1,5 +1,6 @@
 import { LoginForm } from "./login-form";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
+import { ErrorNote } from "@/components/ui/field";
 
 /**
  * The hero is the product's one real idea, not a screenshot of it: three cards
@@ -52,7 +53,16 @@ function demoCards(now: number): Array<{ status: NoteStatus; name: string }> {
   ];
 }
 
-export default function LoginPage() {
+/**
+ * A failed code exchange used to redirect here with ?error=auth and say
+ * nothing, which looks identical to arriving normally. Name what happened.
+ */
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const now = Date.now();
   const cards = demoCards(now);
 
@@ -78,6 +88,15 @@ export default function LoginPage() {
             An ambient status board that replaces the standup. Post once, and the
             team can see it without asking. Not a chat app.
           </p>
+
+          {error === "auth" && (
+            <div className="mb-5">
+              <ErrorNote>
+                That sign-in link didn&rsquo;t work. It may have expired or
+                already been used — send yourself a new one.
+              </ErrorNote>
+            </div>
+          )}
 
           <LoginForm />
         </div>
