@@ -1,0 +1,53 @@
+name: Apply migrations
+
+# Runs supabase db push whenever a migration lands on main.
+#
+# Vercel deploys the app on the same push, and the two are independent — this
+# job and that build start at roughly the same moment. Migrations here are
+# additive (new nullable columns, new functions, new enum values), so a deploy
+# that briefly runs ahead of its schema degrades rather than breaks. If a change
+# is ever destructive — dropping a column the running app still selects — do it
+# by hand and in two steps instead of relying on this.
+#
+# db push applies only what is missing, tracked in
+# supabase_migrations.schema_migrations. That table is the reason the repo's
+# history had to be baselined once: migrations applied by pasting SQL into the
+# dashboard leave no record, so the CLI would otherwise try to replay them.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  # Lets you re-run a failed apply without an empty commit.
+  workflow_dispatch:
+
+# One at a time. Two pushes in quick succession must not race each other into
+# the same database.
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link the project
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: Show what will be applied
+        run: supabase migration list --linked
+
+      - name: Apply
+        run: supabase db push --linked
