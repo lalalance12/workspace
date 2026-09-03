@@ -52,7 +52,7 @@ export function SignupForm() {
       });
 
       if (error) {
-        setError(readableAuthError(error.message));
+        setError(readableAuthError(error.message, "signup"));
         return;
       }
 
