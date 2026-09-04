@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { NudgeBanner, type PeerNudge } from "@/components/nudge-banner";
 import { NudgeComposer } from "@/components/nudge-composer";
+import { StatusDetail } from "@/components/status-detail";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { EmptyState } from "@/components/ui/page";
 import { createClient } from "@/lib/supabase/client";
@@ -56,6 +57,11 @@ export function BoardView({
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(serverNow);
   const [composingFor, setComposingFor] = useState<string | null>(null);
+  // Which card's preview is open, held as a profile id rather than a copy of
+  // the status. The dialog then reads out of the same `statuses` map the board
+  // does, so a Realtime update while it is open rewrites what you are reading
+  // instead of leaving a stale snapshot on screen.
+  const [openFor, setOpenFor] = useState<string | null>(null);
 
   const memberFor = useMemo(
     () => new Map(members.map((m) => [m.id, m])),
@@ -182,6 +188,12 @@ export function BoardView({
       Boolean(row.status),
     );
 
+  // A card can go away underneath an open preview — the person posts nothing
+  // for long enough that a realtime patch replaces the row, or they leave the
+  // team. Resolve through the live map every render so the dialog closes with
+  // the card rather than holding a status that is no longer on the board.
+  const openStatus = openFor ? (statuses[openFor] ?? null) : null;
+
   return (
     <>
       <NudgeBanner
@@ -253,6 +265,7 @@ export function BoardView({
                       status={status}
                       name={member.display_name}
                       now={now}
+                      onOpen={() => setOpenFor(member.id)}
                       action={
                         <span className="relative flex shrink-0 items-center gap-1.5">
                           {/* Nudged is public on purpose — nudging in the open
@@ -298,6 +311,15 @@ export function BoardView({
           </AnimatePresence>
         </div>
       )}
+
+      <StatusDetail
+        status={openStatus}
+        name={nameFor(openFor)}
+        now={now}
+        isSelf={openFor === viewerId}
+        open={openStatus !== null}
+        onClose={() => setOpenFor(null)}
+      />
     </>
   );
 }

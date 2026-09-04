@@ -331,6 +331,7 @@ export type Database = {
           auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
           custom_label: string | null
+          details: string | null
           duration_minutes: number | null
           ended_at: string | null
           id: string
@@ -345,6 +346,7 @@ export type Database = {
           auto_switch_to?: Database["public"]["Enums"]["status_state"] | null
           created_at?: string
           custom_label?: string | null
+          details?: string | null
           duration_minutes?: number | null
           ended_at?: string | null
           id?: string
@@ -359,6 +361,7 @@ export type Database = {
           auto_switch_to?: Database["public"]["Enums"]["status_state"] | null
           created_at?: string
           custom_label?: string | null
+          details?: string | null
           duration_minutes?: number | null
           ended_at?: string | null
           id?: string
@@ -503,6 +506,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      leave_team: { Args: never; Returns: undefined }
       respond_to_nudge: {
         Args: {
           p_note?: string
@@ -514,6 +518,7 @@ export type Database = {
           auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
           custom_label: string | null
+          details: string | null
           duration_minutes: number | null
           ended_at: string | null
           id: string
@@ -560,6 +565,7 @@ export type Database = {
         Args: {
           p_auto_switch_to?: Database["public"]["Enums"]["status_state"]
           p_custom_label?: string
+          p_details?: string
           p_duration_minutes?: number
           p_note?: string
           p_state: Database["public"]["Enums"]["status_state"]
@@ -569,6 +575,7 @@ export type Database = {
           auto_switch_to: Database["public"]["Enums"]["status_state"] | null
           created_at: string
           custom_label: string | null
+          details: string | null
           duration_minutes: number | null
           ended_at: string | null
           id: string
@@ -582,6 +589,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "status_updates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      switch_team: {
+        Args: { p_code: string }
+        Returns: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+          peer_nudges_per_hour: number
+          peer_nudges_per_recipient_per_hour: number
+          renudge_after_minutes: number
+          stale_after_minutes: number
+          system_nudges_enabled: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
           isOneToOne: true
           isSetofReturn: false
         }

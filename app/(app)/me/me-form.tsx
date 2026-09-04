@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { Button } from "@/components/ui/button";
-import { ErrorNote, Field, Input } from "@/components/ui/field";
+import { ErrorNote, Field, Input, Textarea } from "@/components/ui/field";
 import { RpcError, setStatus } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -62,6 +62,7 @@ export function MeForm({
   const [note, setNote] = useState(current?.note ?? "");
   const [ticketRef, setTicketRef] = useState(current?.ticket_ref ?? "");
   const [customLabel, setCustomLabel] = useState(current?.custom_label ?? "");
+  const [details, setDetails] = useState(current?.details ?? "");
   const [durationMinutes, setDurationMinutes] = useState<number | null>(
     current?.duration_minutes ?? null,
   );
@@ -75,7 +76,7 @@ export function MeForm({
   // What the card would look like if posted now. Falls back to the saved status
   // so the panel is never empty while someone is mid-edit.
   const draft: NoteStatus | null =
-    note.trim() || ticketRef.trim() || customLabel.trim() || preview
+    note.trim() || ticketRef.trim() || customLabel.trim() || details.trim() || preview
       ? {
           id: preview?.id ?? "draft",
           profile_id: profileId,
@@ -85,6 +86,7 @@ export function MeForm({
           duration_minutes: durationMinutes,
           auto_switch_to: durationMinutes ? autoSwitchTo : null,
           custom_label: state === "other" ? customLabel.trim() || null : null,
+          details: details.trim() || null,
           started_at: preview?.started_at ?? new Date(serverNow).toISOString(),
         }
       : null;
@@ -106,6 +108,7 @@ export function MeForm({
       duration_minutes: durationMinutes,
       auto_switch_to: durationMinutes ? autoSwitchTo : null,
       custom_label: state === "other" ? customLabel.trim() || null : null,
+      details: details.trim() || null,
       started_at: new Date().toISOString(),
     };
     setPreview(optimistic);
@@ -118,6 +121,7 @@ export function MeForm({
         durationMinutes,
         autoSwitchTo: durationMinutes ? autoSwitchTo : null,
         customLabel: state === "other" ? customLabel.trim() || null : null,
+        details: details.trim() || null,
       });
       setPreview(saved as unknown as NoteStatus);
       startTransition(() => router.refresh());
@@ -137,9 +141,11 @@ export function MeForm({
     setState(pick.state as StatusState);
     setNote(pick.note ?? "");
     setTicketRef(pick.ticket_ref ?? "");
-    // Quick picks don't carry a custom label; if it was an 'other' pick the
-    // person re-types it in the field that appears.
+    // Quick picks carry the headline, not the paragraph. A custom label and
+    // details are both written fresh each time — reusing yesterday's details
+    // under today's note is how a board starts lying.
     setCustomLabel("");
+    setDetails("");
   }
 
   return (
@@ -194,6 +200,25 @@ export function MeForm({
             onChange={(e) => setNote(e.target.value)}
             maxLength={140}
             placeholder="Fixing the checkout bug"
+          />
+        </Field>
+
+        <Field
+          label="Details"
+          hint={
+            <>
+              Optional. Never shown on the card — it opens when someone clicks
+              it. {details.length}/2000
+            </>
+          }
+        >
+          <Textarea
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            maxLength={2000}
+            placeholder={
+              "What's actually going on. Where you're stuck, what you tried, what you need from someone."
+            }
           />
         </Field>
 

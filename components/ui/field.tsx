@@ -31,6 +31,25 @@ export function Input({ className = "", ...rest }: ComponentProps<"input">) {
   return <input {...rest} className={`input ${className}`} />;
 }
 
+/**
+ * The same control, for text that runs to paragraphs. Vertical resize only:
+ * dragging a textarea wider than its column is the one thing browsers let you
+ * do to a form that always looks like a mistake.
+ */
+export function Textarea({
+  className = "",
+  rows = 4,
+  ...rest
+}: ComponentProps<"textarea">) {
+  return (
+    <textarea
+      {...rest}
+      rows={rows}
+      className={`input min-h-24 resize-y leading-relaxed ${className}`}
+    />
+  );
+}
+
 /** A checkbox and its sentence. The sentence is the label, so it is children. */
 export function Toggle({
   checked,

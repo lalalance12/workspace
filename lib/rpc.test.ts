@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   RpcError,
   acknowledgeNudge,
+  leaveTeam,
   messageForError,
   sendPeerNudge,
   setStatus,
+  switchTeam,
   type Client,
 } from "./rpc";
 
@@ -45,6 +47,28 @@ describe("setStatus", () => {
       p_note: undefined,
       p_ticket_ref: undefined,
     });
+  });
+
+  it("sends details under the name the migration declares", async () => {
+    const { client, rpc } = clientReturning({ data: { id: "s1" } });
+
+    await setStatus(client, {
+      state: "blocked",
+      note: "Waiting on the staging key",
+      details: "Asked in #platform at 09:40.\n\nNo reply yet.",
+    });
+
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_details: "Asked in #platform at 09:40.\n\nNo reply yet.",
+    });
+  });
+
+  it("omits details rather than sending null, so the column default applies", async () => {
+    const { client, rpc } = clientReturning({ data: { id: "s1" } });
+
+    await setStatus(client, { state: "working", details: null });
+
+    expect(rpc.mock.calls[0][1].p_details).toBeUndefined();
   });
 
   it("surfaces a collision on the one-open-status index as something actionable", async () => {
@@ -95,11 +119,60 @@ describe("acknowledgeNudge", () => {
   });
 });
 
+describe("switchTeam", () => {
+  it("normalises the code, because join codes are an uppercase alphabet", async () => {
+    const { client, rpc } = clientReturning({ data: { id: "t2" } });
+
+    await switchTeam(client, "  k7qm4rxp ");
+
+    expect(rpc).toHaveBeenCalledWith("switch_team", { p_code: "K7QM4RXP" });
+  });
+
+  it("says so when you are already on that team", async () => {
+    const { client } = clientReturning({
+      error: { code: "WS012", message: "already on that team" },
+    });
+
+    await expect(switchTeam(client, "K7QM4RXP")).rejects.toThrow(
+      /already on that team/i,
+    );
+  });
+
+  it("reports a bad code without releasing anything — the RPC is atomic", async () => {
+    const { client } = clientReturning({
+      error: { code: "WS009", message: "no such code" },
+    });
+
+    await expect(switchTeam(client, "NOPE")).rejects.toMatchObject({
+      code: "WS009",
+    });
+  });
+});
+
+describe("leaveTeam", () => {
+  // Returns void, so it must check the error and not the payload. unwrap()
+  // would reject the legitimate null and report a failure that did not happen.
+  it("resolves on the null payload a void function returns", async () => {
+    const { client } = clientReturning({ data: null, error: null });
+
+    await expect(leaveTeam(client)).resolves.toBeUndefined();
+  });
+
+  it("still throws when the database refuses", async () => {
+    const { client } = clientReturning({
+      error: { code: "WS001", message: "not on a team" },
+    });
+
+    await expect(leaveTeam(client)).rejects.toBeInstanceOf(RpcError);
+  });
+});
+
 describe("messageForError", () => {
   it("maps every SQLSTATE the migrations raise", () => {
     const raised = [
       "WS001", "WS002", "WS003", "WS004",
       "WS005", "WS006", "WS007", "WS008", "WS009",
+      "WS010", "WS011", "WS012", "WS013",
     ];
     for (const code of raised) {
       expect(messageForError({ code })).not.toMatch(/something went wrong/i);

@@ -30,6 +30,8 @@ export const RPC_MESSAGES: Record<string, string> = {
   WS009: "That join code doesn't match a team. Check it with whoever sent it.",
   WS010: "A duration must be 1, 15, 30, 45 or 60 minutes.",
   WS011: "Tell us what you're on — an Other status needs a label.",
+  WS012: "You're already on that team.",
+  WS013: "Details run to at most 2000 characters. Trim them and post again.",
   // Raised by the one-open-status-per-person index if two writes race.
   "23505": "That update collided with another one. Try posting it again.",
 };
@@ -85,6 +87,11 @@ export interface SetStatusInput {
   autoSwitchTo?: StatusState | null;
   /** Free-text label for the 'other' state. Ignored for every other state. */
   customLabel?: string | null;
+  /**
+   * The long half. Up to 2000 characters, never drawn on the card — it is what
+   * the preview opens to show.
+   */
+  details?: string | null;
 }
 
 /**
@@ -102,6 +109,7 @@ export async function setStatus(client: Client, input: SetStatusInput) {
     p_duration_minutes: input.durationMinutes ?? undefined,
     p_auto_switch_to: input.autoSwitchTo ?? undefined,
     p_custom_label: input.customLabel ?? undefined,
+    p_details: input.details ?? undefined,
   });
   return unwrap(data, error);
 }
@@ -152,6 +160,33 @@ export async function joinTeam(client: Client, code: string) {
     p_code: code.trim().toUpperCase(),
   });
   return unwrap(data, error);
+}
+
+/**
+ * Move to another team in one step.
+ *
+ * Not leaveTeam() followed by joinTeam(): the RPC resolves the code before it
+ * releases the current membership, so a typo fails with WS009 and leaves you
+ * exactly where you were. Two calls would strand you between teams.
+ *
+ * A head who moves hands the team to its longest-standing member on the way
+ * out — ask the server who that is (getTeamMembership) before offering this.
+ */
+export async function switchTeam(client: Client, code: string) {
+  const { data, error } = await client.rpc("switch_team", {
+    p_code: code.trim().toUpperCase(),
+  });
+  return unwrap(data, error);
+}
+
+/**
+ * Leave without arriving anywhere. team_id goes null and the app layout routes
+ * to /onboarding. Returns nothing, so it checks the error and not the payload —
+ * unwrap() would reject the legitimate null.
+ */
+export async function leaveTeam(client: Client) {
+  const { error } = await client.rpc("leave_team");
+  if (error) throw new RpcError(messageForError(error), error.code);
 }
 
 /** Head only. Invalidates the old code. */

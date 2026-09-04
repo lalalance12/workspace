@@ -65,8 +65,11 @@ export async function getBoardData(teamId: string) {
       .order("display_name"),
     supabase
       .from("status_updates")
+      // details comes down with the board rather than on demand: it is capped
+      // at 2000 characters and a team is a handful of rows, so one round trip
+      // beats a fetch per card the moment anyone opens a preview.
       .select(
-        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, started_at",
+        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, details, auto_switch_to, started_at",
       )
       .eq("team_id", teamId)
       .is("ended_at", null),
@@ -82,7 +85,7 @@ export async function getMyStatus(profileId: string) {
   const { data } = await supabase
     .from("status_updates")
     .select(
-      "id, profile_id, state, note, ticket_ref, duration_minutes, auto_switch_to, custom_label, started_at",
+      "id, profile_id, state, note, ticket_ref, duration_minutes, auto_switch_to, custom_label, details, started_at",
     )
     .eq("profile_id", profileId)
     .is("ended_at", null)
