@@ -1693,3 +1693,377 @@ grant execute on function public.set_status(
   public.status_state, text, text, integer, public.status_state, text
 ) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- 20260904090000_status_details.sql
+-- ---------------------------------------------------------------------------
+
+-- Workspace: the long half of a status.
+--
+-- The note is the headline and stays short — 140 characters, and the card now
+-- clamps it to three lines so one wordy status cannot stretch its card taller
+-- than its neighbours and pull the whole grid out of line. Details is where the
+-- rest goes: the paragraph you would have typed into the note if it had room.
+--
+-- It is deliberately not on the card. A board earns its keep by being
+-- glanceable, so anything that has to be *read* rather than *scanned* lives one
+-- click away, in the preview. Optional everywhere: a status with no details is
+-- the normal case, not a half-finished one.
+--
+-- 2000 characters is a real paragraph or three and still small enough that
+-- selecting a whole team's worth of open statuses stays cheap.
+
+alter table public.status_updates
+  add column details text
+    check (details is null or length(details) <= 2000);
+
+-- ---------------------------------------------------------------------------
+-- set_status gains p_details
+-- ---------------------------------------------------------------------------
+-- Same overload dance as duration and custom_label before it: adding a
+-- parameter changes the signature, so the six-argument version has to go first
+-- or a three-argument call (respond_to_nudge still makes one) is ambiguous
+-- between the two. Postgres does not track function-to-function references as
+-- dependencies, so dropping this is safe even though respond_to_nudge calls
+-- it — the call re-resolves to the new function.
+drop function if exists public.set_status(
+  public.status_state, text, text, integer, public.status_state, text
+);
+
+create or replace function public.set_status(
+  p_state            public.status_state,
+  p_note             text    default null,
+  p_ticket_ref       text    default null,
+  p_duration_minutes integer default null,
+  p_auto_switch_to   public.status_state default null,
+  p_custom_label     text    default null,
+  p_details          text    default null
+)
+returns public.status_updates
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_profile public.profiles;
+  v_status  public.status_updates;
+  v_note    text := nullif(trim(coalesce(p_note, '')), '');
+  v_ticket  text := nullif(trim(coalesce(p_ticket_ref, '')), '');
+  -- Trimmed at the ends but not in the middle: the blank line between two
+  -- paragraphs is the author's, and squashing it would rewrite what they wrote.
+  v_details text := nullif(trim(coalesce(p_details, '')), '');
+  v_now     timestamptz := now();
+  v_switch  public.status_state := case
+              when p_duration_minutes is null then null
+              else p_auto_switch_to
+            end;
+  -- A label belongs to 'other' and nothing else.
+  v_label   text := case
+              when p_state = 'other' then nullif(trim(coalesce(p_custom_label, '')), '')
+              else null
+            end;
+begin
+  select * into v_profile from public.profiles where id = auth.uid();
+
+  if v_profile.id is null or v_profile.team_id is null then
+    raise exception 'you are not on a team yet' using errcode = 'WS001';
+  end if;
+
+  if p_duration_minutes is not null and p_duration_minutes not in (1, 15, 30, 45, 60) then
+    raise exception 'duration must be 1, 15, 30, 45 or 60 minutes' using errcode = 'WS010';
+  end if;
+
+  if p_state = 'other' and v_label is null then
+    raise exception 'an Other status needs a label' using errcode = 'WS011';
+  end if;
+
+  -- Belt and braces alongside the CHECK, so an over-long paste gets a sentence
+  -- it can act on instead of a raw constraint violation.
+  if v_details is not null and length(v_details) > 2000 then
+    raise exception 'details run to at most 2000 characters' using errcode = 'WS013';
+  end if;
+
+  -- Close the currently open row, if any.
+  update public.status_updates
+     set ended_at = v_now
+   where profile_id = v_profile.id
+     and ended_at is null;
+
+  insert into public.status_updates
+    (profile_id, team_id, state, note, ticket_ref, duration_minutes,
+     auto_switch_to, custom_label, details, started_at)
+  values
+    (v_profile.id, v_profile.team_id, p_state, v_note, v_ticket, p_duration_minutes,
+     v_switch, v_label, v_details, v_now)
+  returning * into v_status;
+
+  -- Any status update answers an open system nudge. There is at most one.
+  update public.nudges
+     set state                 = 'resolved',
+         resolved_at           = v_now,
+         resolved_by_status_id = v_status.id
+   where recipient_id = v_profile.id
+     and kind  = 'system'
+     and state = 'open';
+
+  -- Remember it so /me can offer it back as one tap next time. Details are not
+  -- part of a quick pick's identity, for the same reason duration is not: the
+  -- headline is the habit, the paragraph is written fresh each time.
+  insert into public.quick_picks (profile_id, state, note, ticket_ref, use_count, last_used_at)
+  values (v_profile.id, p_state, v_note, v_ticket, 1, v_now)
+  on conflict (profile_id, state, coalesce(note, ''), coalesce(ticket_ref, ''))
+  do update set use_count    = quick_picks.use_count + 1,
+                last_used_at = v_now;
+
+  return v_status;
+end;
+$$;
+
+revoke execute on function public.set_status(
+  public.status_state, text, text, integer, public.status_state, text, text
+) from public, anon;
+grant execute on function public.set_status(
+  public.status_state, text, text, integer, public.status_state, text, text
+) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 20260904090100_team_membership.sql
+-- ---------------------------------------------------------------------------
+
+-- Workspace: leaving a team, and moving to another one.
+--
+-- Until now membership was one-way. join_team() refuses anyone who already has
+-- a team (WS008), which is right for onboarding and wrong for everything after
+-- it: people change squads, and the only way out was for someone to edit the
+-- database by hand.
+--
+-- Two entry points, because they are two different intentions:
+--
+--   switch_team(code)  I am moving to that team. Atomic — the code is checked
+--                      BEFORE the current membership is released, so a typo
+--                      leaves you exactly where you were rather than stranding
+--                      you with no team at all.
+--   leave_team()       I am leaving, full stop. Lands back on /onboarding.
+--
+-- New error codes:
+--   WS012  you are already on that team
+--   WS013  details run to at most 2000 characters   (see status_details)
+
+-- ---------------------------------------------------------------------------
+-- release_team_membership
+-- ---------------------------------------------------------------------------
+-- Everything that has to be true before a profile's team_id may change.
+--
+-- Not callable by anyone: Postgres grants EXECUTE on new functions to PUBLIC by
+-- default, so the revoke at the bottom is load-bearing, not decoration. The two
+-- RPCs below reach it because a security-definer function runs as the owner.
+--
+-- The caller is responsible for the privileged_profile_write flag — this
+-- promotes a successor head, which is a profile write the guard trigger blocks.
+create or replace function public.release_team_membership(p_profile uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_team uuid;
+  v_role public.team_role;
+  v_heir uuid;
+  v_now  timestamptz := now();
+begin
+  select team_id, role into v_team, v_role
+    from public.profiles
+   where id = p_profile;
+
+  -- Nothing to release. switch_team() accepts someone with no team, so this is
+  -- a normal path, not an error.
+  if v_team is null then
+    return;
+  end if;
+
+  -- 1. Close the open status.
+  --
+  -- The row carries the old team_id, so an open status left behind is a person
+  -- still working on a board they have left. The board would not draw them —
+  -- it lists members by team — but the row would sit open forever, the
+  -- one-open-per-profile index would count it, and the auto-switch scheduler
+  -- would keep flipping its state on a timer. Close it.
+  update public.status_updates
+     set ended_at = v_now
+   where profile_id = p_profile
+     and ended_at is null;
+
+  -- 2. Settle every open nudge they are part of, in either direction.
+  --
+  -- An open nudge on a team you have left is unanswerable: the nudges select
+  -- policy is team-scoped, so the row becomes invisible to the one person who
+  -- was supposed to act on it, and the sender's card keeps its "Nudged" marker
+  -- with nothing to clear it. The two kinds have different terminal states —
+  -- nudges_terminal_state enforces peer -> acknowledged, system -> resolved —
+  -- so this is two statements, not one.
+  update public.nudges
+     set state       = 'acknowledged',
+         resolved_at = v_now
+   where kind  = 'peer'
+     and state = 'open'
+     and (recipient_id = p_profile or sender_id = p_profile);
+
+  update public.nudges
+     set state       = 'resolved',
+         resolved_at = v_now
+   where kind  = 'system'
+     and state = 'open'
+     and recipient_id = p_profile;
+
+  -- 3. Give up the desk. profile_id is UNIQUE across the whole table, so a desk
+  --    still held on the old floor plan would block being seated on the new one.
+  update public.desks
+     set profile_id = null
+   where profile_id = p_profile;
+
+  -- 4. Drop their notifications.
+  --
+  -- All four notification kinds are about a nudge, and every nudge belongs to
+  -- the team being left, so carrying the bell's contents across would mean
+  -- arriving at a new team with alerts about the old one. These are transient
+  -- alerts, not records — status_updates keeps the history.
+  delete from public.notifications
+   where profile_id = p_profile;
+
+  -- 5. Hand over the team if this was its head.
+  --
+  -- A headless team is a dead end: no one can rotate the join code, edit nudge
+  -- policy, or reach /settings/team's head-only half ever again. So the
+  -- longest-standing remaining member is promoted. Deterministic — created_at
+  -- then id, so two heads leaving at once cannot pick each other.
+  --
+  -- No notification. There are exactly four notification triggers and adding a
+  -- fifth is out of bounds; the new head sees the role on their next load, and
+  -- the UI warns the leaver by name before they confirm.
+  if v_role = 'head' then
+    select id into v_heir
+      from public.profiles
+     where team_id = v_team
+       and id <> p_profile
+     order by created_at, id
+     limit 1;
+
+    -- No heir means the team is now empty. The row is left in place on purpose:
+    -- deleting it would cascade every status_updates row on it, and an empty
+    -- team is harmless and invisible (the teams select policy is scoped to your
+    -- own). Whoever still holds the join code can walk back in and pick it up.
+    if v_heir is not null then
+      update public.profiles
+         set role = 'head'
+       where id = v_heir;
+    end if;
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- switch_team
+-- ---------------------------------------------------------------------------
+-- Security definer for the same reason join_team is: the caller cannot see the
+-- team they are moving to, because the teams select policy only shows the one
+-- they are already on.
+create or replace function public.switch_team(p_code text)
+returns public.teams
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_team    public.teams;
+  v_current uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in' using errcode = 'WS001';
+  end if;
+
+  select team_id into v_current from public.profiles where id = auth.uid();
+
+  -- Resolve the code FIRST. This is the whole reason this is one RPC and not a
+  -- leave_team() call followed by a join_team() call: a bad code has to fail
+  -- before anything is released, or a typo costs you your team.
+  select * into v_team
+    from public.teams
+   where join_code = upper(trim(coalesce(p_code, '')));
+
+  if v_team.id is null then
+    raise exception 'that join code does not match a team' using errcode = 'WS009';
+  end if;
+
+  if v_current is not null and v_current = v_team.id then
+    raise exception 'you are already on that team' using errcode = 'WS012';
+  end if;
+
+  perform set_config('workspace.privileged_profile_write', 'on', true);
+
+  perform public.release_team_membership(auth.uid());
+
+  -- Always 'member'. Arriving with a code makes you a member of the team you
+  -- arrived at, whatever you were on the team you left.
+  update public.profiles
+     set team_id = v_team.id,
+         role    = 'member'
+   where id = auth.uid();
+
+  perform set_config('workspace.privileged_profile_write', 'off', true);
+
+  return v_team;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- leave_team
+-- ---------------------------------------------------------------------------
+-- Leaving without arriving anywhere. team_id goes null, which the (app) layout
+-- reads as "not on a team" and routes to /onboarding.
+create or replace function public.leave_team()
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_current uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in' using errcode = 'WS001';
+  end if;
+
+  select team_id into v_current from public.profiles where id = auth.uid();
+
+  if v_current is null then
+    raise exception 'you are not on a team yet' using errcode = 'WS001';
+  end if;
+
+  perform set_config('workspace.privileged_profile_write', 'on', true);
+
+  perform public.release_team_membership(auth.uid());
+
+  update public.profiles
+     set team_id = null,
+         role    = 'member'
+   where id = auth.uid();
+
+  perform set_config('workspace.privileged_profile_write', 'off', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Privileges
+-- ---------------------------------------------------------------------------
+-- The helper is reachable only from the two RPCs above, which run as the owner.
+-- Without this revoke it would be callable by any signed-in user against any
+-- profile id, which would let anyone evict anyone.
+revoke execute on function public.release_team_membership(uuid)
+  from public, anon, authenticated;
+
+revoke execute on function public.switch_team(text) from public, anon;
+grant  execute on function public.switch_team(text) to authenticated;
+
+revoke execute on function public.leave_team()      from public, anon;
+grant  execute on function public.leave_team()      to authenticated;
+
