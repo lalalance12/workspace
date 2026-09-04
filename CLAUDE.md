@@ -80,8 +80,18 @@ Ground truth is `supabase/migrations/`. This is the index, not the definition.
 | `respond_to_nudge(id, state, …)` | validates, then delegates to `set_status` |
 | `create_team(name)` | onboarding; caller becomes head |
 | `join_team(code)` | onboarding; caller becomes member |
+| `switch_team(code)` | move teams in one transaction; validates the code **before** releasing the old membership |
+| `leave_team()` | leave without arriving anywhere; `team_id` goes null and the app routes to `/onboarding` |
 | `rotate_join_code()` | head only; invalidates the old code |
 | `enqueue_due_nudges()` | pg_cron, every minute; **not** callable by clients |
+
+Leaving is never just an `update profiles set team_id`. `release_team_membership()`
+— private, revoked from every client role — closes the open status, settles
+open nudges in both directions, frees the desk, drops the notifications, and
+promotes the longest-standing remaining member if the leaver was the head. A
+team with members never ends up without a head; a team whose last member leaves
+is left empty on purpose rather than deleted, because deleting it would cascade
+away every `status_updates` row it ever held.
 
 Membership is by **shared join code** — 8 characters, no ambiguous glyphs, shown
 on `/settings/team`. Anyone holding it can join, which is why it rotates.
@@ -94,7 +104,8 @@ RPCs raise distinct SQLSTATEs so the UI can say what failed and what to do.
 `WS001` no team · `WS002` already nudged them this hour · `WS003` hourly limit ·
 `WS004` recipient paused · `WS005` not on your team · `WS006` nudge already
 handled · `WS007` note over 80 chars · `WS008` already on a team · `WS009` bad
-join code
+join code · `WS010` bad duration · `WS011` Other needs a label ·
+`WS012` already on that team · `WS013` details over 2000 chars
 
 ### The four notification triggers
 
@@ -133,6 +144,11 @@ recipient (`components/nudge-banner.tsx`), show a team-wide "Nudged" marker on
 the card, and are acknowledged from either the banner or the bell. The head
 edits every limit on `/settings/team` — those write straight to `public.teams`
 under the `head updates own team` policy, no RPC needed.
+
+`/settings/team` is reachable by everyone. The policy half stays head-only, but
+the membership half — which team you are on, leaving it, moving to another —
+belongs to whoever is standing there, which is why Team is in the nav for
+members too.
 
 `/office` is **parked until after the presentation**. The route and its query
 still exist; it is off the nav on purpose.
@@ -216,6 +232,29 @@ The **avatar is always violet**, never the state colour: the circle answers
 *who* and the card answers *what is happening*, one signal each. It overhangs
 the card's top-left corner as a sibling of `.note`, with the wrapper carrying
 `data-decay` so both inherit `--tint` from one place.
+
+### The card is a headline
+
+A note is 140 characters in the database and clamps to three lines on the card,
+so no one status can make its card taller than its neighbours. An uneven grid is
+the fastest way to stop a board being scannable, which is the only thing a board
+is for.
+
+`details` — 2000 characters, optional, added on `/me` — holds everything that
+has to be *read* rather than *scanned*. It never appears on the card. Its only
+trace there is a `+` in the footer.
+
+Clicking a card opens the preview (`components/status-detail.tsx`): the full
+note, the details, the ticket, and real timestamps instead of `3H`. It is a
+reading surface and has to stay one — **no reply box, no reactions, no thread.**
+A preview that can be answered in place is the DM inbox this product refuses to
+grow, arriving by the side door. The only action it carries is a link to `/me`,
+and only on your own card.
+
+The trigger is a button stretched over the card (`.note-open`), not a handler on
+the card itself. The card already contains the Nudge button, and a button inside
+a button is invalid HTML that screen readers cannot announce. As a sibling
+underneath, the trigger gets focus, Enter and Space for free and nests nothing.
 
 ### Restraint
 

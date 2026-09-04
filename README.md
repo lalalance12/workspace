@@ -152,17 +152,20 @@ most common source of confusing type errors in this project.
 
 ```
 app/
+  page.tsx          the landing page — the one indexable route
   (app)/            authenticated shell — top bar, drafting grid
     board/          corkboard of sticky notes (server shell + client realtime)
     office/         floor-plan view                        [shell]
     me/             set my status — the most important screen
     timeline/       today's history
-    settings/team/  head-only: nudge policy, members, desks [read-only]
+    settings/team/  membership for everyone; nudge policy + join code head-only
     settings/me/    nudge preferences, pause, message link
   login/            Google OAuth + magic link
   auth/callback/    code -> session cookie
+  auth/signout/     POST only — ends the session server-side
 components/
   status-note.tsx   the sticky note, including the decay treatment
+  status-detail.tsx what a card opens to: full note, details, real timestamps
 lib/
   staleness.ts      the decay thresholds — single source, unit tested
   rpc.ts            typed wrappers over the write API

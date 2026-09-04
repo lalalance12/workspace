@@ -75,6 +75,8 @@ test("create an account, start a team, land on the board", async ({ page }) => {
   await expect(page).toHaveURL(/\/board$/);
   await expect(page.getByText("Nothing pinned yet")).toBeVisible();
 
-  // Creating a team makes you its head, which is what puts Team in the nav.
+  // Team is in the nav for everyone now — members go there to leave or move —
+  // so this asserts the bar rendered, not that the account is a head. What is
+  // head-only is the join code and the nudge policy on the page itself.
   await expect(page.getByRole("link", { name: "Team" })).toBeVisible();
 });
