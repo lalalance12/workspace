@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AccountMenu } from "@/components/account-menu";
+import { Wordmark } from "@/components/brand-mark";
 import { NavLinks, type NavItem } from "@/components/nav-links";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -46,14 +47,7 @@ export function TopBar({
     >
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
         <Link href="/board" className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="size-5 rounded-md"
-            style={{ backgroundImage: "var(--gradient-brand)" }}
-          />
-          <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
-            Workspace
-          </span>
+          <Wordmark />
         </Link>
 
         <NavLinks items={NAV} />

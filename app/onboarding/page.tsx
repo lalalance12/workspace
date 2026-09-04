@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { OnboardingChoice } from "./onboarding-choice";
+import { Wordmark } from "@/components/brand-mark";
 import { getViewer } from "@/lib/queries";
 
 /** Names the decision, not the greeting: the h1 is personalised and a tab is not. */
@@ -41,14 +42,7 @@ export default async function OnboardingPage() {
     <Shell>
       <div className="rise-in mx-auto w-full max-w-3xl">
         <div className="mb-10 flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="size-5 rounded-md"
-            style={{ backgroundImage: "var(--gradient-brand)" }}
-          />
-          <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
-            Workspace
-          </span>
+          <Wordmark />
         </div>
 
         <h1 className="text-3xl">

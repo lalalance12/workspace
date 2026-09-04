@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Wordmark } from "@/components/brand-mark";
 import { DecayDemo } from "@/components/decay-demo";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,14 +39,7 @@ export default async function Home() {
     <div className="canvas-ambient min-h-dvh">
       <header className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-6">
         <span className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="size-5 rounded-md"
-            style={{ backgroundImage: "var(--gradient-brand)" }}
-          />
-          <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
-            Workspace
-          </span>
+          <Wordmark />
         </span>
 
         <nav className="ml-auto flex items-center gap-2">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Wordmark } from "@/components/brand-mark";
 import { DecayDemo } from "@/components/decay-demo";
 
 /**
@@ -31,14 +32,7 @@ export function AuthShell({
       <div className="mx-auto grid min-h-dvh max-w-6xl items-center gap-16 px-6 py-16 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)]">
         <div className="rise-in w-full max-w-sm">
           <Link href="/" className="mb-10 flex items-center gap-2.5">
-            <span
-              aria-hidden="true"
-              className="size-5 rounded-md"
-              style={{ backgroundImage: "var(--gradient-brand)" }}
-            />
-            <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
-              Workspace
-            </span>
+            <Wordmark />
           </Link>
 
           <h1 className="text-3xl leading-[1.15]">{title}</h1>

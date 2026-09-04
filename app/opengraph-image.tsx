@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { BrandMark } from "@/components/brand-mark";
+
 /**
  * The card a Workspace link turns into when someone pastes it in Slack.
  *
@@ -46,19 +48,10 @@ export default function OpengraphImage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
           {/* The mark itself, not the letter W set in whatever face Satori
-              falls back to. Same numbers as scripts/generate-icons.mjs, so the
-              badge here and the tab icon are the same drawing. */}
-          <svg width="68" height="68" viewBox="0 0 32 32">
-            <rect width="32" height="32" rx="7" fill="#8141e8" />
-            <path
-              d="M7.6 9.8 L11.8 22.2 L16 14 L20.2 22.2 L24.4 9.8"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="4.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+              falls back to. The same component the header renders, so the
+              unfurl, the tab icon and the top of the page cannot drift apart.
+              The plate is passed as hex because Satori cannot read the token. */}
+          <BrandMark size={68} plate="#8141e8" />
           <div style={{ fontSize: 36, fontWeight: 700, color: "#261e3c" }}>
             Workspace
           </div>
