@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BoardView } from "./board-view";
 import { PageHeader } from "@/components/ui/page";
 import { getBoardData, getOpenPeerNudges, getViewer } from "@/lib/queries";
+
+export const metadata: Metadata = { title: "Board" };
 
 /**
  * Server shell: fetch the initial data for a fast first paint, then hand off

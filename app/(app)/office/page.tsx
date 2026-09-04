@@ -1,5 +1,9 @@
+import type { Metadata } from "next";
+
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getBoardData, getViewer } from "@/lib/queries";
+
+export const metadata: Metadata = { title: "Office" };
 
 /**
  * Floor-plan view with speech bubbles.

@@ -3,8 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/env";
 
-/** Routes reachable without a session. */
-const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+/**
+ * Routes reachable without a session.
+ *
+ * "/" is matched exactly, never as a prefix — the check below is `=== p` or
+ * `startsWith(p + "/")`, and for "/" the second test is `startsWith("//")`,
+ * which no real path satisfies. So the landing page is public and nothing
+ * beneath it leaks.
+ */
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth"];
 
 /**
  * Refreshes the auth session on every request and redirects signed-out users

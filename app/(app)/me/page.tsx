@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
+
 import { MeForm } from "./me-form";
 import { PageHeader } from "@/components/ui/page";
 import { getMyStatus, getQuickPicks, getViewer } from "@/lib/queries";
+
+/** Matches the nav label rather than the h1 — a tab title is a way back to a place. */
+export const metadata: Metadata = { title: "Status" };
 
 export default async function MePage() {
   const viewer = await getViewer();

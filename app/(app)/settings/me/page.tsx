@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
+
 import { MeSettingsForm } from "./me-settings-form";
 import { PasswordSettingsForm } from "./password-settings-form";
 import { PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
+
+export const metadata: Metadata = { title: "Your settings" };
 
 export default async function MeSettingsPage() {
   const viewer = await getViewer();

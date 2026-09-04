@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SignInForm } from "./sign-in-form";
 import { AuthShell } from "@/components/auth-shell";
 import { ErrorNote } from "@/components/ui/field";
+
+export const metadata: Metadata = { title: "Sign in" };
 
 /**
  * A failed code exchange used to redirect here with ?error=auth and say

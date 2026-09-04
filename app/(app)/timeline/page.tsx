@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { TimelineDatePicker } from "./date-picker";
@@ -5,6 +6,8 @@ import { TimelineView, type TimelineRow } from "./timeline-view";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Timeline" };
 
 /**
  * One day of history, chosen by ?date=YYYY-MM-DD.

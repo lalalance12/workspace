@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { OnboardingChoice } from "./onboarding-choice";
 import { getViewer } from "@/lib/queries";
+
+/** Names the decision, not the greeting: the h1 is personalised and a tab is not. */
+export const metadata: Metadata = { title: "Join a team" };
 
 /**
  * The fork every new account lands on: join the team someone invited you to,
