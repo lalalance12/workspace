@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AccountMenu } from "@/components/account-menu";
 import { NavLinks, type NavItem } from "@/components/nav-links";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -13,11 +14,17 @@ import { NotificationBell } from "@/components/notification-bell";
  *
  * "Me" became "Status": next to Board and Timeline it read as an account page,
  * which is what /settings/me actually is.
+ *
+ * Team is in the bar for everyone now, not just the head. It used to be gated
+ * because the page was nothing but head-only controls; it now also holds the
+ * membership half — which team you are on, and how to leave or move to another
+ * — and that belongs to whoever is standing in it.
  */
 const NAV: NavItem[] = [
   { href: "/board", label: "Board" },
   { href: "/me", label: "Status" },
   { href: "/timeline", label: "Timeline" },
+  { href: "/settings/team", label: "Team" },
 ];
 
 export function TopBar({
@@ -29,10 +36,6 @@ export function TopBar({
   displayName: string;
   isHead: boolean;
 }) {
-  const items = isHead
-    ? [...NAV, { href: "/settings/team", label: "Team" }]
-    : NAV;
-
   return (
     <header
       className="sticky top-0 z-40 border-b backdrop-blur-md"
@@ -53,23 +56,11 @@ export function TopBar({
           </span>
         </Link>
 
-        <NavLinks items={items} />
+        <NavLinks items={NAV} />
 
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell profileId={profileId} />
-          <Link
-            href="/settings/me"
-            className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm transition-colors duration-200 hover:bg-[var(--sunken)]"
-          >
-            <span
-              aria-hidden="true"
-              className="grid size-7 place-items-center rounded-full text-xs font-semibold text-white"
-              style={{ backgroundImage: "var(--gradient-brand)" }}
-            >
-              {displayName.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="hidden sm:inline">{displayName}</span>
-          </Link>
+          <AccountMenu displayName={displayName} isHead={isHead} />
         </div>
       </div>
     </header>
